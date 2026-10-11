@@ -72,13 +72,15 @@ export interface HoldingTax {
   verified: boolean;
   annualTax: number;     // incremental tax this year on recurring income (interest)
   ifSoldTax: number;     // incremental tax if sold today (stacked with all other sales)
-  gainType: 'slab' | 'STCG' | 'LTCG' | 'none' | 'unknown';
+  /** 'to-verify': the rule is flagged unverified, so no sale-tax figure is estimated */
+  gainType: 'slab' | 'STCG' | 'LTCG' | 'none' | 'unknown' | 'to-verify';
   postTaxYield?: number; // for interest-bearing: annual yield after tax (%)
 }
 
 export interface TaxProfile {
   regime: Regime;
   grossAnnual: number;
+  incomeAssumed: boolean;
   baseTax: number;
   marginalRate: number;
   annualInterest: number;
@@ -92,12 +94,22 @@ export interface TaxProfile {
 
 const pctTxt = (r: number) => `${(r * 100).toFixed(1).replace(/\.0$/, '')}%`;
 
+/** Debt funds bought before the cut-off fall outside the design document's "always slab" rule. */
+/** Unrecognised securities and manual entries: we don't know the instrument, so no tax rule is assumed. */
+export const taxTypeUnknown = (h: CanonicalHolding) => h.instrumentType === 'Other' || h.instrumentType === 'Manual entry';
+
+export const debtFundRuleUnverified = (h: CanonicalHolding) =>
+  h.instrumentType === 'Debt fund' && (!h.purchaseDate || h.purchaseDateEstimated || h.purchaseDate < CAPITAL_GAINS.debtFundSlabFrom);
+
 function gainParts(h: CanonicalHolding): { slab: number; stcg: number; ltcg: number; type: HoldingTax['gainType'] } {
-  if (h.unrealisedGain == null) return { slab: 0, stcg: 0, ltcg: 0, type: 'unknown' };
+  const none = { slab: 0, stcg: 0, ltcg: 0 };
+  if (h.broadClass === 'cash' || h.instrumentType === 'Fixed deposit') return { ...none, type: 'none' };
+  // never apply a rate the tax table marks "to verify" — leave those holdings out of sale estimates
+  if (!TAX_RULES[h.taxRule].verified || debtFundRuleUnverified(h) || taxTypeUnknown(h)) return { ...none, type: 'to-verify' };
+  if (h.unrealisedGain == null) return { ...none, type: 'unknown' };
   const g = Math.max(0, h.unrealisedGain);
-  if (h.broadClass === 'cash' || h.instrumentType === 'Fixed deposit') return { slab: 0, stcg: 0, ltcg: 0, type: 'none' };
   if (h.taxRule === 'slab') return { slab: g, stcg: 0, ltcg: 0, type: 'slab' };
-  if (h.taxRule === 'equity' || h.taxRule === 'reit-invit' || h.taxRule === 'gold') {
+  if (h.taxRule === 'equity') {
     const months = h.holdingMonths ?? 13;
     return months >= CAPITAL_GAINS.equityLongTermMonths ? { slab: 0, stcg: 0, ltcg: g, type: 'LTCG' } : { slab: 0, stcg: g, ltcg: 0, type: 'STCG' };
   }
@@ -106,7 +118,8 @@ function gainParts(h: CanonicalHolding): { slab: number; stcg: number; ltcg: num
 
 export function buildTaxProfile(a: Answers, p: CanonicalPortfolio, asOf = p.asOf): TaxProfile {
   const regime: Regime = a.regime ?? 'new';
-  const grossAnnual = a.grossAnnual ?? (a.monthlyIncome ?? 0) * 12 * 1.25;
+  const incomeAssumed = a.grossAnnual == null;
+  const grossAnnual = a.grossAnnual ?? (a.monthlyIncome ?? 0) * 12 * 1.25; // disclosed via notes when assumed
   const base: TaxInputs = { salary: grossAnnual, otherSlab: 0, stcgEquity: 0, ltcgEquity: 0, regime, deductions: a.oldDeductions };
   const baseTax = computeTax(base).total;
 
@@ -138,10 +151,16 @@ export function buildTaxProfile(a: Answers, p: CanonicalPortfolio, asOf = p.asOf
     const ifSoldTax = sellAllTotal - restTotal;
     const chip = rule.chip.replace('{slab}', pctTxt(mRate));
     const yieldPct = h.annualInterest > 0 && h.currentValue > 0 ? (h.annualInterest / h.currentValue) * 100 : undefined;
+    const debtUnverified = debtFundRuleUnverified(h);
+    const unknownType = taxTypeUnknown(h);
     perHolding[h.holdingId] = {
-      chip: x.type === 'STCG' ? '20% if sold now (<1 yr)' : chip,
-      detail: rule.detail,
-      verified: rule.verified,
+      chip: unknownType ? 'Type unknown · to verify' : x.type === 'STCG' ? '20% if sold now (<1 yr)' : debtUnverified ? 'Rule to verify' : chip,
+      detail: unknownType
+        ? 'We don’t know exactly what this investment is, so no tax rule is applied and no sale-tax estimate is shown.'
+        : debtUnverified
+        ? 'The design document’s slab-rate rule covers debt funds bought on or after 1 April 2023. This holding’s purchase date is earlier or unknown, so its treatment is marked “to verify” and no sale-tax estimate is shown.'
+        : rule.detail,
+      verified: rule.verified && !debtUnverified && !unknownType,
       annualTax, ifSoldTax, gainType: x.type,
       postTaxYield: yieldPct != null ? yieldPct * (annualTax > 0 ? 1 - annualTax / h.annualInterest : 1) : undefined,
     };
@@ -152,16 +171,12 @@ export function buildTaxProfile(a: Answers, p: CanonicalPortfolio, asOf = p.asOf
     notes.push('Your interest income pushes taxable income past ₹12 lakh, so part of the rebate is lost. Each rupee of interest costs more than your slab suggests.');
   }
   if (all.ltcg > 0) notes.push(`The ₹1.25 lakh yearly exemption on long-term equity gains is shared across all your equity holdings.`);
+  const excluded = parts.filter((x) => x.type === 'to-verify' && x.h.currentValue > 0).length;
+  if (excluded) notes.push(`The “if sold” estimate leaves out ${excluded} holding${excluded > 1 ? 's' : ''} whose tax rule is marked “to verify”.`);
+  if (incomeAssumed) notes.push('Yearly income wasn’t given, so it is assumed to be take-home pay × 12 × 1.25. Add your income for a better estimate.');
 
   return {
-    regime, grossAnnual, baseTax, marginalRate: mRate, annualInterest, annualInterestTax: interestTax, sellAllTax, perHolding,
+    regime, grossAnnual, incomeAssumed, baseTax, marginalRate: mRate, annualInterest, annualInterestTax: interestTax, sellAllTax, perHolding,
     meta: TAX_META, stale: daysBetween(TAX_META.lastVerified, asOf) > 180, notes,
   };
-}
-
-/** What-if (B8 step 3): annual tax on interest from moving `amount` out of an FD at `ratePct`. */
-export function fdInterestTax(amount: number, ratePct: number, t: TaxProfile): { interest: number; tax: number; postTaxRate: number } {
-  const interest = (amount * ratePct) / 100;
-  const tax = interest * t.marginalRate;
-  return { interest, tax, postTaxRate: ratePct * (1 - t.marginalRate) };
 }

@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { ChevronDown, Database, Heart, Sparkles } from 'lucide-react';
 import { useStore } from '../store';
 import { pick, tr } from '../i18n';
-import { INTRO, LATER, optionsFor, type Question } from '../config/questions';
+import { INTRO, LATER, QUESTIONS, optionsFor, type Question } from '../config/questions';
+
+const goalsQ = QUESTIONS.find((q) => q.id === 'goals')!;
 import { AmountInput, Chip, PrimaryButton, ProgressBar, Stepper } from '../components/kit';
 import { cx } from '../components/ui';
 import { bufferMonthsFor } from '../engine/risk';
@@ -57,7 +59,7 @@ export function QuestionFlow({ group }: { group: 'intro' | 'later' }) {
 
       <h1 className="mt-6 text-[22px] font-bold leading-snug text-slate-900">{pick(lang, q.text)}</h1>
 
-      <button onClick={() => setWhyOpen((o) => !o)} className="mt-2 inline-flex items-center gap-1 self-start text-[13px] font-medium text-slate-500 hover:text-slate-800 cursor-pointer" aria-expanded={whyOpen}>
+      <button onClick={() => setWhyOpen((o) => !o)} className="mt-1 inline-flex min-h-8 items-center gap-1 self-start py-1.5 text-[13px] font-medium text-slate-500 hover:text-slate-800 cursor-pointer" aria-expanded={whyOpen}>
         {tr(lang, 'whyAsk')} <ChevronDown className={cx('h-3.5 w-3.5 transition', whyOpen && 'rotate-180')} />
       </button>
       {whyOpen && <p className="mt-1 rounded-xl bg-slate-100 px-3 py-2 text-[13px] leading-relaxed text-slate-600">{pick(lang, q.why)}</p>}
@@ -97,7 +99,14 @@ function Body({ q, answers, setAnswer, onPick, prefillValue }: { q: Question; an
         {optionsFor(q, answers).map((o) => {
           const on = value === o.value;
           return (
-            <button key={o.value} onClick={() => { setAnswer(q.id, o.value); onPick(); }}
+            <button key={o.value} onClick={() => {
+              setAnswer(q.id, o.value);
+              if (q.id === 'lifeStage' && Array.isArray(answers.goals)) {
+                const allowed = optionsFor(goalsQ, { ...answers, lifeStage: o.value as Answers['lifeStage'] }).map((g) => g.value);
+                setAnswer('goals', answers.goals.filter((g) => allowed.includes(g)));
+              }
+              onPick();
+            }}
               className={cx('rounded-2xl border-2 px-4 py-3.5 text-left transition cursor-pointer', on ? 'border-ink-900 bg-ink-900 text-white' : 'border-slate-200 bg-white hover:border-slate-300')}>
               <div className="text-[15px] font-semibold">{pick(lang, o.label)}</div>
               {o.detail && <div className={cx('mt-0.5 text-[13px]', on ? 'text-slate-300' : 'text-slate-500')}>{pick(lang, o.detail)}</div>}

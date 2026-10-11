@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { BadgeIndianRupee, X } from 'lucide-react';
 import { cx } from './ui';
 import { amountInWords } from '../lib/format';
@@ -30,7 +30,7 @@ export function TaxChip({ text, verified = true, onClick }: { text: string; veri
     <button
       type="button"
       onClick={onClick}
-      className={cx('inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold ring-1 ring-inset cursor-pointer',
+      className={cx('inline-flex min-h-6 items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold ring-1 ring-inset cursor-pointer',
         verified ? 'bg-indigo-50 text-indigo-700 ring-indigo-200' : 'bg-amber-50 text-amber-800 ring-amber-200')}
       title={verified ? 'Tax rule' : 'Tax rule marked “to verify” — estimate only'}
     >
@@ -79,13 +79,14 @@ export function Term({ t, children }: { t: keyof typeof JARGON | string; childre
 
 /** Bottom sheet that expands in place (no page change). */
 export function Sheet({ title, onClose, children, tall = true }: { title: ReactNode; onClose: () => void; children: ReactNode; tall?: boolean }) {
+  const titleId = useId();
   return (
-    <div className="absolute inset-0 z-50 flex flex-col justify-end" role="dialog" aria-modal="true">
+    <div className="absolute inset-0 z-50 flex flex-col justify-end" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[1px]" onClick={onClose} />
       <div className={cx('sheet-up relative flex flex-col rounded-t-3xl bg-white shadow-2xl', tall ? 'max-h-[92%]' : 'max-h-[70%]')}>
         <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-slate-200" />
         <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-3">
-          <div className="min-w-0 text-[15px] font-bold text-slate-900">{title}</div>
+          <div id={titleId} className="min-w-0 text-[15px] font-bold text-slate-900">{title}</div>
           <button onClick={onClose} aria-label="Close" className="rounded-full p-1.5 text-slate-500 hover:bg-slate-100 cursor-pointer"><X className="h-5 w-5" /></button>
         </div>
         <div className="thin-scroll overflow-y-auto px-5 pb-6">{children}</div>

@@ -1,14 +1,15 @@
 # Investor Assistant (with Portfolio X-Ray)
 
-A mobile-first assistant for new and hesitant investors in India. It helps you understand your risk profile, see all your investments in one place, and get simple, educational guidance. It was built from the *Investor Assistant: User Flow and Technical Flow* design document, and the Portfolio X-Ray data checks run inside the flow.
+A mobile-first assistant for new and hesitant investors in India. It helps you understand your risk profile, see all your investments in one place, and get simple, educational guidance. It was built from the *Investor Assistant: User Flow and Technical Flow* design document. The Portfolio X-Ray data checks run inside the flow and flag *possible* discrepancies between your statements.
 
 > **Demo mode — what is simulated:**
-> - **Account Aggregator (AA) integration is simulated.** No real AA, bank, broker, depository or RBI/SEBI system is contacted. A mock AA service in `src/engine/aa.ts` returns sample data from three fictional personas. Every person, account, identifier (prefixed `DM-`) and price is fictional.
-> - **The assistant is scripted.** It has no AI model and no LLM calls. Replies are built from fixed rules and a pre-written lesson library, and every number comes from the deterministic engines.
-> - **Tax figures are estimates.** They use the design document's stated rates and are **not independently or legally verified** (see [Tax assumptions](#tax-assumptions)).
-> - Outputs are educational suitability insights, **not personalised investment advice**.
+> - **Accounts, consent, OTP and all financial data are simulated.** The Account Aggregator (AA) integration is a mock (`src/engine/aa.ts`). No real AA, bank, broker, depository or RBI/SEBI system is contacted, and any 6-digit OTP is accepted. Every person, account, identifier (prefixed `DM-`) and price is fictional.
+> - **The assistant is scripted.** It has no AI model and no LLM calls. Replies come from fixed rules and a pre-written lesson library, and every number comes from the deterministic engines.
+> - **Educational only.** Outputs are suitability insights for learning, **not personalised investment advice**. The prototype is not a SEBI-registered adviser.
+> - **Tax rates are not independently or legally verified.** They are taken as stated in the design document (see [Tax assumptions](#tax-assumptions)).
+> - **Projections are hypothetical.** Grow shows a cautious/expected/optimistic range from assumed returns. Returns are not guaranteed.
 
-## Run it
+## Run it locally
 
 Needs Node.js 18+ (tested on Node 24).
 
@@ -17,67 +18,88 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
+## Checks
+
 ```bash
-npm test           # 42 unit, persona and failure-path tests (Vitest)
-npm run typecheck
-npm run build
+npm test           # 68 Vitest tests (engines, personas, failure paths, persistence, i18n)
+npm run typecheck  # tsc -b
+npm run build      # production build to dist/
 npm run personas   # prints what each sample persona produces end to end
 ```
 
-On desktop the app is shown in a phone frame. A presenter panel next to it has sample personas, account-failure switches and a restart button. On a phone, the same controls are behind the **Demo mode** pill.
+On desktop the app is shown in a phone frame. A presenter panel next to it offers sample personas, account-failure switches (fail / partial / timeout) and a restart button. On a phone, the same controls are behind the **Demo mode** pill.
 
-## User flow (Part A)
+## The journey: welcome to My money
 
 | Step | What happens |
 |---|---|
-| A1 Welcome | Three reassurance points, **Get started** or **Try with sample data** (3 personas), EN/हिं toggle |
-| A2 Intro questions | One per screen: life stage, age and dependents, goals (the list adapts to life stage), income type, yearly income. Each has a progress bar with time left, example chips, a "why we ask" line, **Not sure**, and a back button that keeps answers |
-| A3 Connect (simulated AA) | Why we ask → consent with toggles → choose accounts → mock OTP and per-account fetch → live data check → "We found N accounts and M holdings worth ₹X. Does this look right?" with **Edit** (missing price/date, unrecognised security, X-Ray evidence) |
-| A3 failure paths | An account fails (retry / continue without it / add manually), partial data, a timeout, consent declined (manual entry or sample data) |
-| A4 Capacity and behaviour | Income, expenses and EMIs prefilled from bank data to confirm. Emergency-fund suggestion is computed ("about ₹X"); amounts are shown in words as typed; scenario questions |
-| A5 Risk reveal | Conservative / Moderate / Aggressive, ability vs willingness, a transparency line, a kind explanation when they disagree, Retake |
-| A6 Home | Total value, allocation as one bar with target markers, a one-line verdict, a single advice card. Simple view toggle |
-| A7 Assistant | The advice card expands into the chat in place, with a seeded first message. Instrument lessons (FD, G-Secs/T-Bills, bonds, debt and equity funds, gold, PPF, NPS) show tax chips. Follow-up chips after every reply. Declines guaranteed-return and stock-tip questions |
-| A8 Grow | SIP or lump sum, cautious/expected/optimistic range, invested-vs-growth chart, after-tax and inflation toggles, a ₹1 crore milestone, "start 5 years earlier". Prefilled from the advice or the chat |
-| A9 My money | Holdings grouped by asset class, account sources shown subtly, tax chips, **Explain this**, X-Ray data checks, tax at a glance, refresh, revoke |
-| A10 Ongoing | Save and resume (localStorage), jargon tooltips, a printable one-page summary, a "re-check your profile" prompt, and lessons with quizzes (11 topics) |
+| A1 Welcome | Three reassurance points, the EN/हिं toggle, and two routes. **Get started** walks the full flow using the demo accounts of the family-stage persona. **Try with sample data** picks one of 3 personas (young starter, family stage, pre-retiree) and, as the design specifies, skips connecting accounts and the questions, going straight to the risk profile |
+| A2 Intro questions | Life stage, age and dependents, goals (the list adapts to life stage), income type, yearly income. Each has a progress bar with time left, example chips, "why we ask", **Not sure**, a back button that keeps answers, and amounts shown in words ("₹24 lakh") |
+| A3 Connect (simulated AA) | Why we ask → consent with toggles → choose accounts → mock OTP → one fetch per account → live data check → "We found N accounts and M holdings worth ₹X. Does this look right?" with **Edit** (purchase price/date, unrecognised security, X-Ray evidence) |
+| A3 failure paths | Failed account (retry, retry all, continue without it, add manually), partial data, timeout, consent declined (manual entry or sample data), and a page reload mid-fetch (shown as "interrupted" with the same options) |
+| A4 Capacity and behaviour | Income, expenses and EMIs prefilled from bank data to confirm, a computed emergency-fund suggestion, and scenario questions |
+| A5 Risk reveal | Conservative / Moderate / Aggressive from ability (capacity) and willingness (tolerance). The lower one wins, with a kind explanation when they disagree, plus Retake |
+| A6 Home | Total value, allocation bar with target markers, a one-line verdict, a single advice card, an "incomplete" warning if accounts are missing or partial, and a simple view toggle |
+| A7 Assistant | The advice card expands into a scripted chat. Instrument lessons (FD, G-Secs/T-Bills, bonds, debt and equity funds, gold, PPF, NPS) carry tax chips. Follow-up chips after every reply. Declines guaranteed-return and stock-tip questions |
+| A8 Grow | SIP or lump sum, cautious/expected/optimistic range, invested-vs-growth chart, inflation-adjusted and after-tax toggles (equity fund / FD / debt fund), a ₹1 crore milestone, "start 5 years earlier" |
+| A9 My money | Holdings by asset class with account sources, tax chips, **Explain this**, X-Ray data checks, tax at a glance (new/old regime), refresh/retry, and prompts for manual entries that may now be double-counted |
+| A10 Ongoing | Save and resume, jargon tooltips, a printable one-page summary, a re-check prompt, 11 lessons with quizzes, and revoke/delete |
 
 ## Technical flow (Part B)
 
 | PDF section | Where |
 |---|---|
-| B3 Questionnaire engine | `src/config/questions.ts` (schema, branching, prefill paths) |
+| B3 Questionnaire | `src/config/questions.ts` (schema, branching, prefill paths) |
 | B4 Mock AA | `src/engine/aa.ts` with personas in `src/personas/*.json` (raw shapes differ per account type) |
-| B5 Normalisation | `src/engine/normalise.ts`: validate/reject, resolve names and tickers, run X-Ray, merge across accounts with weighted average cost, classify, enrich, quality prompts |
-| X-Ray rules | `src/engine/xray.ts`: 7 rules with evidence, reasoning and uncertainty |
-| B6 Risk | `src/engine/risk.ts` (capacity, tolerance, the lower one wins, life-stage adjustment) |
-| B7 Suitability | `src/engine/suitability.ts` (target by profile × life stage, drift, verdicts, concentration) |
-| B8 Tax | `src/engine/tax.ts` with config in `src/config/tax.ts` (FY 2026-27 table, source, last-verified date) |
-| B9 Calculator | `src/engine/calc.ts` (the PDF's formulas, range, after-tax, inflation, milestone) |
+| B5 Normalisation | `src/engine/normalise.ts`: validate/reject, resolve names and tickers, run X-Ray, merge across accounts (weighted average cost), classify, enrich, quality prompts |
+| X-Ray rules | `src/engine/xray.ts`: 7 rules, each with evidence, reasoning and uncertainty, worded as possible discrepancies |
+| B6 Risk | `src/engine/risk.ts` |
+| B7 Suitability | `src/engine/suitability.ts` |
+| B8 Tax | `src/engine/tax.ts` with the table in `src/config/tax.ts` |
+| B9 Calculator | `src/engine/calc.ts` |
 | Advice builder | `src/engine/advice.ts` |
-| B10 Assistant | `src/engine/assistant.ts` (scripted; numbers only from engines) and `src/data/instruments.ts` (lesson library) |
-| B11 API surface | `src/engine/pipeline.ts` (`api` facade shaped like the endpoints; runs locally) |
-| B12 State | `src/store.tsx` (single store, persisted, derived portfolio and analysis) |
-| B13 Errors | Failed or partial fetches, unmatched securities, missing dates (estimated with a note), stale prices (≈), tax staleness check, assistant fallback, error boundary |
-| B15 Tests | `src/engine/*.test.ts`: tax stacking (rebate loss at ₹12 lakh, shared ₹1.25 lakh exemption, debt-fund slab), personas end to end, AA failures |
+| B10 Assistant | `src/engine/assistant.ts` (scripted) and `src/data/instruments.ts` (lesson library) |
+| B11 API surface | `src/engine/pipeline.ts` (`api` facade shaped like the endpoints; runs locally, no backend) |
+| B12 State | `src/store.tsx` (single store persisted to `localStorage`, with `hydrate`/`reducer` exported for tests) |
+| B15 Tests | `src/engine/xray.test.ts`, `engines.test.ts`, `qa.test.ts` |
+
+## Data storage, resume and revoke
+
+Everything is stored only in this browser's `localStorage`, under the key `ia.state.v2`. There is no server.
+- **Resume:** refreshing returns you to the same step with your answers.
+- **Revoke access & delete my data** (Settings) clears answers, fetched data, edits, chat, results and consent, along with keys left by the earlier prototype. Only the language choice is kept.
 
 ## Tax assumptions
 
-The tax engine uses the FY 2026-27 rates **as stated in the design document**: new-regime slabs, the ₹12 lakh rebate, the ₹75,000 standard deduction, 20% equity STCG, 12.5% equity LTCG above ₹1.25 lakh, and slab rate for FD/bond interest and for debt funds bought on or after 1 April 2023. These rates have **not been independently or legally verified**. The "last verified" date in `src/config/tax.ts` is the date the document states, not a verification by this project.
+The tax engine uses the FY 2026-27 rates **as stated in the design document**:
+- new-regime slabs, the ₹12 lakh rebate and the ₹75,000 standard deduction
+- 20% equity STCG, and 12.5% equity LTCG above a shared ₹1.25 lakh exemption
+- slab rate for FD/bond interest and for debt funds bought on or after 1 April 2023
 
-Flagged **to verify** (shown in the app as "Rule to verify", with `*` on tax chips and a list in *How this works*):
+These rates have **not been independently or legally verified**. The "last verified" date in `src/config/tax.ts` is the date the document states, not a verification by this project.
 
+**Rules marked "to verify" are never silently applied.** These holdings show "Rule to verify", and the "if sold today" estimate leaves them out:
+- Gold ETF / SGB treatment
+- REIT/InvIT payouts
+- Unrecognised securities and manual entries (type unknown)
+- Debt funds bought before 1 April 2023, or with an unknown date
+
+Other to-verify items:
 - **Marginal relief** just above the ₹12 lakh rebate limit. This is a prototype assumption that is *not* in the design document.
-- Gold ETF and Sovereign Gold Bond treatment.
-- PPF, NPS, ELSS and 80C limits.
-- REIT/InvIT distribution components.
-- TDS thresholds and surcharge.
+- PPF, NPS, ELSS and 80C limits, TDS thresholds, and surcharge.
 
-Out of scope and estimate only: HUF, NRI, grandfathering on pre-2018 equity, and detailed loss carry-forward.
+**Other modelling assumptions** (disclosed in the app):
+- If yearly income isn't given, it is assumed to be take-home × 12 × 1.25.
+- Savings interest is assumed at 2.75%.
+- FD interest is simple interest on principal.
+
+Out of scope, estimate only: HUF, NRI, grandfathering on pre-2018 equity, and loss carry-forward.
 
 ## Known limitations
 
-- **No real data or backend:** no real AA, login or backend, and no AI model. The assistant uses keyword matching, so unusual phrasing gets a polite fallback with suggestion chips.
-- **Tax:** see [Tax assumptions](#tax-assumptions). Have a qualified professional review the rates before any real-world use.
-- **Hindi:** covers onboarding, the risk reveal, home and navigation. Lessons, chat and engine-generated text such as advice headlines stay in English. The Hindi copy needs a native-speaker review.
-- **Simplified bond and calculator maths:** shown as illustrations, not forecasts.
+- **No real data, backend or AI.** The assistant matches keywords, so unusual phrasing gets a polite fallback with suggestion chips.
+- **Not implemented:** XIRR calculation (only a jargon tooltip exists); purchase lots (average cost and earliest purchase date only); surcharge for very high incomes; and the insurance answer does not affect the risk score.
+- **Hindi covers:** welcome, the intro and capacity questions, connect-flow headings, buttons and statuses, the risk reveal, home labels and navigation. **English only** (a notice is shown in Hindi mode): lessons, chat, engine-generated advice text, Grow, My money and the sheets. The Hindi copy needs a native-speaker review.
+- **Simplified maths:** bond, calculator and tax figures are illustrations. After-tax equity treats the whole gain as redeemed in the final year.
+- **Accessibility:** keyboard navigation and visible focus states work, but sheets do not trap focus yet.
+- **Untestable in the UI:** the missing-price path (a recognised security with no quote, valued at cost and flagged) can't be triggered from the demo data; it is covered by unit tests.

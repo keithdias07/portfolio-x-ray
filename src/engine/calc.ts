@@ -50,11 +50,20 @@ export function valueAt(i: CalcInput, years: number, ratePct = i.ratePct): numbe
   return fv;
 }
 
+/** Contributions in today's money: each monthly SIP payment is deflated from the month it is made. */
+export function realInvestedAt(i: CalcInput, years: number): number {
+  if (i.mode === 'lumpsum') return i.amount; // paid today
+  const infl = 1 + (i.inflationPct ?? 5) / 100;
+  let total = 0;
+  for (let k = 0; k < Math.round(years * 12); k++) total += i.amount / Math.pow(infl, k / 12);
+  return total;
+}
+
 export function series(i: CalcInput): YearPoint[] {
   const out: YearPoint[] = [];
   for (let y = 0; y <= i.years; y++) {
     const value = valueAt(i, y);
-    const invested = i.inflationAdjusted ? investedAt(i, y) / Math.pow(1 + (i.inflationPct ?? 5) / 100, y) : investedAt(i, y);
+    const invested = i.inflationAdjusted ? realInvestedAt(i, y) : investedAt(i, y);
     out.push({ year: y, invested, growth: Math.max(0, value - invested), value });
   }
   return out;

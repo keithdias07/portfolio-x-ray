@@ -10,7 +10,7 @@ import { CLASS_LABEL } from './suitability';
 import { lessonById, INSTRUMENT_LESSONS } from '../data/instruments';
 import { RETURN_ASSUMPTIONS, type BroadKey } from '../config/profile';
 import { fmtLakh } from '../lib/format';
-import { fdInterestTax } from './tax';
+import { RULES } from './xray';
 import type { Answers } from './types';
 
 export type Block =
@@ -31,9 +31,11 @@ export interface ChatMessage { id: string; role: 'assistant' | 'user'; blocks: B
 
 export interface Ctx { answers: Answers; portfolio: CanonicalPortfolio; analysis: Analysis }
 
+// ids must stay unique across reloads (chat history is persisted)
 let seq = 0;
-const msg = (blocks: Block[], chips: string[]): ChatMessage => ({ id: `m${++seq}`, role: 'assistant', blocks, chips });
-export const userMsg = (text: string): ChatMessage => ({ id: `m${++seq}`, role: 'user', blocks: [{ kind: 'text', text }], chips: [] });
+const nextId = () => `m${Date.now().toString(36)}-${++seq}`;
+const msg = (blocks: Block[], chips: string[]): ChatMessage => ({ id: nextId(), role: 'assistant', blocks, chips });
+export const userMsg = (text: string): ChatMessage => ({ id: nextId(), role: 'user', blocks: [{ kind: 'text', text }], chips: [] });
 
 export const CHIPS = {
   why: 'Why doesn’t my mix fit?',
@@ -123,9 +125,10 @@ export function respond(input: string, c: Ctx): ChatMessage {
       const blocks: Block[] = [{ kind: 'text', text: `Here’s ${l.name} in four lines:` }, { kind: 'lesson', lessonId: id }];
       if (id === 'fd') {
         const fd = c.portfolio.holdings.find((h) => h.instrumentType === 'Fixed deposit');
-        if (fd) {
-          const w = fdInterestTax(fd.currentValue, (fd.annualInterest / fd.currentValue) * 100, tax);
-          blocks.push({ kind: 'note', text: `Your FD of ${fmtLakh(fd.currentValue)} earns about ${fmtLakh(w.interest)} a year; at your ${(tax.marginalRate * 100).toFixed(1)}% marginal rate that’s about ${fmtLakh(w.tax)} in tax, so roughly ${w.postTaxRate.toFixed(2)}% after tax.` });
+        const t = fd ? tax.perHolding[fd.holdingId] : undefined;
+        if (fd && t) {
+          // same stacked figures as My money — never a separate approximation
+          blocks.push({ kind: 'note', text: `Your FD of ${fmtLakh(fd.currentValue)} earns about ${fmtLakh(fd.annualInterest)} a year. Stacked on your income, that adds about ${fmtLakh(t.annualTax)} to your tax${t.postTaxYield != null ? `, leaving roughly ${t.postTaxYield.toFixed(2)}% after tax` : ''}. Estimate only.` });
         }
       }
       if (l.topicId) blocks.push({ kind: 'action', label: 'Open the full lesson & quiz', action: { type: 'open-topic', topicId: l.topicId } });
@@ -219,7 +222,7 @@ export function respond(input: string, c: Ctx): ChatMessage {
 
   if (has(s, 'data', 'x-ray', 'xray', 'duplicate', 'check', 'error', 'mistake')) {
     const f = c.portfolio.xray.findings;
-    const blocks: Block[] = [{ kind: 'text', text: f.length ? `While combining your accounts I ran ${7} checks and found ${f.length} thing${f.length > 1 ? 's' : ''} worth knowing. The numbers you see already account for them:` : 'Everything matched across your accounts — no issues found.' }];
+    const blocks: Block[] = [{ kind: 'text', text: f.length ? `While combining your accounts I ran ${RULES.length} checks and found ${f.length} possible issue${f.length > 1 ? 's' : ''} worth checking. The numbers you see already apply X-Ray’s best estimate for each:` : 'Everything matched across your accounts — no issues found.' }];
     f.slice(0, 3).forEach((x) => blocks.push({ kind: 'action', label: x.title, action: { type: 'open-finding', findingId: x.id } }));
     return msg(blocks, [CHIPS.why, CHIPS.tax]);
   }

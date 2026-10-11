@@ -62,7 +62,8 @@ export interface State {
   lifeChangeDismissed: boolean;
 }
 
-const KEY = 'ia.state.v2';
+export const STORAGE_KEY = 'ia.state.v2';
+const KEY = STORAGE_KEY;
 
 export const initialState = (): State => ({
   v: 2, sessionId: `S-${Date.now().toString(36).toUpperCase()}`, lang: 'en', simpleView: false, stage: 'welcome', mode: null,
@@ -72,21 +73,63 @@ export const initialState = (): State => ({
   calc: null, learn: { visited: [], quizBest: {} }, sheets: [], lifeChangeDismissed: false,
 });
 
+const INTERRUPTED = 'The fetch was interrupted (the page was reloaded). Retry, continue without it, or add it manually.';
+
+/**
+ * Restore saved state (resume anywhere, A10). Fetches can't survive a reload, so any account that was
+ * still pending — or never started — on the fetch screen becomes a failed session with the usual next steps.
+ */
+export function hydrate(raw: string | null): State {
+  let s: State;
+  try {
+    const parsed = raw ? (JSON.parse(raw) as State) : null;
+    s = parsed && parsed.v === 2 ? { ...initialState(), ...parsed, sheets: [] } : initialState();
+  } catch {
+    return initialState();
+  }
+  const sessions = { ...s.sessions };
+  let changed = false;
+  for (const [id, sess] of Object.entries(sessions)) {
+    if (sess.status === 'pending') { sessions[id] = { ...sess, status: 'failed', error: INTERRUPTED }; changed = true; }
+  }
+  if (s.stage === 'connect' && s.connectStep === 'verify' && Object.keys(sessions).length > 0) {
+    for (const id of s.selectedAccounts) {
+      if (!sessions[id]) { sessions[id] = { accountId: id, status: 'failed', timestamp: '', error: INTERRUPTED }; changed = true; }
+    }
+  }
+  return changed ? { ...s, sessions } : s;
+}
+
 function load(): State {
   try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const s = JSON.parse(raw) as State;
-      if (s.v === 2) return { ...initialState(), ...s, sheets: [] };
-    }
+    return hydrate(localStorage.getItem(KEY));
   } catch { /* storage unavailable */ }
   return initialState();
+}
+
+/** Accounts whose fetched data counts: ready sessions that weren't skipped. Keyed by account, so retries replace, never duplicate. */
+export function accountsFromSessions(sessions: Record<string, FetchSession>, skipped: string[]): RawAccount[] {
+  return Object.values(sessions).filter((x) => x.status === 'ready' && x.data && !skipped.includes(x.accountId)).map((x) => x.data!);
+}
+
+/** Manual entries added while accounts were missing, whose accounts have since been fetched — likely double counts. */
+export function staleStandIns(s: Pick<State, 'manual' | 'sessions' | 'skippedAccounts'>): ManualEntry[] {
+  return s.manual.filter((m) => m.standInFor?.length && m.standInFor.every((id) => s.sessions[id]?.status === 'ready' && !s.skippedAccounts.includes(id)));
+}
+
+/** Human-readable notes when the portfolio is incomplete (partial or skipped accounts). */
+export function incompleteNotes(s: Pick<State, 'mode' | 'sessions' | 'skippedAccounts'>, label: (id: string) => string): string[] {
+  if (s.mode !== 'connect') return [];
+  return [
+    ...Object.values(s.sessions).filter((x) => x.partial).map((x) => `${label(x.accountId)} returned partial data — some holdings may be missing.`),
+    ...s.skippedAccounts.map((id) => `${label(id)} wasn’t fetched — it’s not included in these numbers.`),
+  ];
 }
 
 type Patch = Partial<State> | ((s: State) => Partial<State>);
 type Action = { type: 'patch'; patch: Patch } | { type: 'reset'; keep?: Partial<State> };
 
-function reducer(s: State, a: Action): State {
+export function reducer(s: State, a: Action): State {
   if (a.type === 'reset') return { ...initialState(), ...a.keep };
   const p = typeof a.patch === 'function' ? a.patch(s) : a.patch;
   return { ...s, ...p };
@@ -126,7 +169,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const rawAccounts = useMemo<RawAccount[]>(() => {
     if (s.mode === 'sample') return persona.accounts;
-    return Object.values(s.sessions).filter((x) => x.status === 'ready' && x.data && !s.skippedAccounts.includes(x.accountId)).map((x) => x.data!);
+    return accountsFromSessions(s.sessions, s.skippedAccounts);
   }, [s.mode, s.sessions, s.skippedAccounts, persona]);
 
   const portfolio = useMemo(() => {

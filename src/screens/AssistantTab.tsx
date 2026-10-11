@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { EnglishOnly } from '../components/EnglishOnly';
 import { ArrowLeft, ArrowRight, BookOpen, Bot, ChevronRight, Info, ScanLine, Send, Sparkles, X } from 'lucide-react';
-import { useStore } from '../store';
+import { incompleteNotes, useStore } from '../store';
 import { tr, type SKey } from '../i18n';
 import { AllocationBar, Chip, TaxChip } from '../components/kit';
 import { cx } from '../components/ui';
@@ -25,6 +26,7 @@ function Home() {
   const adv = a.advice;
   const passed = topics.filter((t) => (s.learn.quizBest[t.id] ?? 0) >= 2).length;
   const name = s.mode === 'sample' ? personaById(s.personaId).displayName.split(' ')[0] : '';
+  const incomplete = incompleteNotes(s, (id) => id).length;
 
   return (
     <div className="space-y-3 px-4 pb-6 pt-4">
@@ -37,10 +39,15 @@ function Home() {
         <div className="text-[12.5px] font-medium text-slate-500">{tr(l, 'totalValue')}</div>
         <div className="mt-0.5 text-[32px] font-bold tracking-tight tabular text-slate-900">{fmtINR(p.totalValue)}</div>
         <div className="text-[12px] text-slate-400">≈ {fmtLakh(p.totalValue)} · {p.holdings.length} holdings{p.accountsCount ? ` · ${p.accountsCount} accounts` : ' · added manually'}</div>
+        {incomplete > 0 && (
+          <button onClick={() => set({ tab: 'money' })} className="mt-2 rounded-lg bg-amber-50 px-2.5 py-1.5 text-left text-[12px] font-medium text-amber-900 ring-1 ring-amber-200 cursor-pointer">
+            ⚠ Incomplete: {incomplete} account{incomplete > 1 ? 's' : ''} missing or partial — see My money to retry.
+          </button>
+        )}
         {!s.simpleView && (
           <div className="mt-4">
             <AllocationBar current={a.suit.current} target={a.suit.target} />
-            <p className="mt-1.5 text-[11px] text-slate-400">Black ticks show your suggested mix.</p>
+            <p className="mt-1.5 text-[11px] text-slate-400">{tr(l, 'ticksNote')}</p>
           </div>
         )}
         <div className={cx('mt-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[13px] font-semibold',
@@ -51,7 +58,7 @@ function Home() {
 
       {/* single advice card — expands into the chat in place */}
       <button onClick={() => openChat('advice')} className="advice-card group block w-full overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-[#0f3b36] p-5 text-left text-white shadow-lg cursor-pointer">
-        <div className="flex items-center gap-2 text-[11.5px] font-bold uppercase tracking-wider text-emerald-300"><Bot className="h-4 w-4" /> {s.simpleView ? tr(l, 'nextStep') : 'For you'}</div>
+        <div className="flex items-center gap-2 text-[11.5px] font-bold uppercase tracking-wider text-emerald-300"><Bot className="h-4 w-4" /> {s.simpleView ? tr(l, 'nextStep') : tr(l, 'forYou')}</div>
         <div className="mt-2 text-[18px] font-semibold leading-snug">{adv.headline}</div>
         {!s.simpleView && <p className="mt-1.5 text-[13px] leading-snug text-slate-300">{adv.why[0]}</p>}
         <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-[14px] font-semibold text-ink-900 transition group-hover:gap-2.5">
@@ -59,6 +66,7 @@ function Home() {
         </div>
       </button>
 
+      <EnglishOnly />
       {!s.simpleView && (
         <>
           {adv.dataNote && (
@@ -71,14 +79,14 @@ function Home() {
           <button onClick={() => openSheet({ type: 'library' })} className="flex w-full items-center gap-3 rounded-2xl bg-white p-4 text-left ring-1 ring-slate-100 cursor-pointer">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-violet-50 text-violet-700"><BookOpen className="h-4 w-4" /></span>
             <span className="flex-1">
-              <span className="block text-[14px] font-semibold text-slate-900">Lessons & quizzes</span>
+              <span className="block text-[14px] font-semibold text-slate-900">{tr(l, 'lessons')}</span>
               <span className="block text-[12px] text-slate-500">{passed} of {topics.length} passed · bonds, G-Secs, funds, REITs, risk…</span>
             </span>
             <ChevronRight className="h-4 w-4 text-slate-400" />
           </button>
           {!s.lifeChangeDismissed && (
             <div className="flex items-center gap-3 rounded-2xl bg-sky-50 p-3.5 text-[13px] text-sky-900 ring-1 ring-sky-100">
-              <button onClick={() => set({ stage: 'intro', introIndex: 0 })} className="flex-1 text-left font-medium cursor-pointer">{tr(l, 'lifeChange')}</button>
+              <button onClick={() => set({ stage: 'intro', introIndex: 0 })} className="min-h-8 flex-1 py-1 text-left font-medium cursor-pointer">{tr(l, 'lifeChange')}</button>
               <button onClick={() => set({ lifeChangeDismissed: true })} aria-label="Dismiss" className="rounded-full p-1 hover:bg-sky-100 cursor-pointer"><X className="h-4 w-4" /></button>
             </div>
           )}
@@ -120,6 +128,7 @@ function Chat() {
       </div>
 
       <div className="flex-1 space-y-3 px-3 py-3">
+        <EnglishOnly />
         {!s.disclaimerSeen && (
           <div className="rounded-2xl bg-amber-50 p-3.5 text-[12.5px] leading-relaxed text-amber-900 ring-1 ring-amber-200">
             <ul className="list-disc space-y-1 pl-4">{DISCLAIMERS.full.map((x) => <li key={x}>{x}</li>)}</ul>
@@ -227,7 +236,7 @@ export function LessonCard({ id, compact }: { id: string; compact?: boolean }): 
           ))}
         </dl>
       )}
-      {l.topicId && <button onClick={() => openSheet({ type: 'topic', id: l.topicId! })} className="mt-2 text-[12px] font-semibold text-violet-700 underline cursor-pointer">Full lesson & quiz</button>}
+      {l.topicId && <button onClick={() => openSheet({ type: 'topic', id: l.topicId! })} className="mt-1 min-h-8 py-1.5 text-[12px] font-semibold text-violet-700 underline cursor-pointer">Full lesson & quiz</button>}
     </div>
   );
 }

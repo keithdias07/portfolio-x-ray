@@ -118,13 +118,13 @@ function Choose() {
   return (
     <>
       <h1 className="mt-6 text-[22px] font-bold text-slate-900">{tr(s.lang, 'chooseTitle')}</h1>
-      <p className="mt-1 text-[13.5px] text-slate-500">Found linked to your mobile number (simulated). Most people have two or three brokers — tick all to see the full picture.</p>
+      <p className="mt-1 text-[13.5px] text-slate-500">{tr(s.lang, 'chooseSub')}</p>
       <div className="mt-4 space-y-2">
         {accounts.map((a) => <AccountRow key={a.id} a={a} on={s.selectedAccounts.includes(a.id)} onToggle={() => toggle(a.id)} />)}
       </div>
       {persona.documents.length > 0 && (
         <>
-          <div className="mt-5 text-[12px] font-bold uppercase tracking-wide text-slate-500">Already with us</div>
+          <div className="mt-5 text-[12px] font-bold uppercase tracking-wide text-slate-500">{tr(s.lang, 'alreadyWithUs')}</div>
           <div className="mt-2 space-y-2">
             {persona.documents.map((d) => (
               <label key={d.id} className="flex cursor-pointer items-center gap-3 rounded-2xl bg-white p-3.5 ring-1 ring-slate-100">
@@ -186,7 +186,7 @@ function Verify() {
     return (
       <>
         <h1 className="mt-6 text-[22px] font-bold text-slate-900">{tr(s.lang, 'verifyTitle')}</h1>
-        <p className="mt-1 text-[13.5px] text-slate-500">Each institution sends a one-time password. <b>Demo:</b> any 6 digits work.</p>
+        <p className="mt-1 text-[13.5px] text-slate-500">{tr(s.lang, 'otpSub')}</p>
         <div className="mt-4 space-y-2">
           {fips.map((f) => (
             <label key={f} className="flex items-center gap-3 rounded-2xl bg-white p-3.5 ring-1 ring-slate-100">
@@ -197,8 +197,8 @@ function Verify() {
             </label>
           ))}
         </div>
-        <button onClick={() => setOtps(Object.fromEntries(fips.map((f) => [f, '123456'])))} className="mt-2 self-start text-[13px] font-semibold text-emerald-700 underline cursor-pointer">Fill demo OTPs</button>
-        <div className="mt-auto pt-8"><PrimaryButton disabled={!allOtp} onClick={start}>Verify & fetch</PrimaryButton></div>
+        <button onClick={() => setOtps(Object.fromEntries(fips.map((f) => [f, '123456'])))} className="mt-1 min-h-8 self-start py-1.5 text-[13px] font-semibold text-emerald-700 underline cursor-pointer">{tr(s.lang, 'fillOtps')}</button>
+        <div className="mt-auto pt-8"><PrimaryButton disabled={!allOtp} onClick={start}>{tr(s.lang, 'verifyFetch')}</PrimaryButton></div>
       </>
     );
   }
@@ -206,6 +206,11 @@ function Verify() {
   return (
     <>
       <h1 className="mt-6 text-[22px] font-bold text-slate-900">{tr(s.lang, 'verifyTitle')}</h1>
+      {unresolved.length > 1 && (
+        <button onClick={() => unresolved.forEach(({ a }) => fetchOne(a.id, true))} className="mt-3 inline-flex items-center gap-1.5 self-start rounded-full bg-ink-900 px-3.5 py-1.5 text-[13px] font-semibold text-white cursor-pointer">
+          <RotateCcw className="h-3.5 w-3.5" /> {tr(s.lang, 'retry')} ({unresolved.length})
+        </button>
+      )}
       <div className="mt-4 space-y-2">
         {sessions.map(({ a, sess }) => {
           const skipped = s.skippedAccounts.includes(a.id);
@@ -220,7 +225,7 @@ function Verify() {
                   <span className="block text-[12px] text-slate-500">{a.label} · {a.maskedId}</span>
                 </span>
                 <span className={cx('text-[12px] font-semibold', !sess || sess.status === 'pending' ? 'text-slate-400' : sess.status === 'ready' ? 'text-emerald-700' : 'text-rose-600')}>
-                  {!sess || sess.status === 'pending' ? 'Fetching…' : sess.status === 'ready' ? (sess.partial ? 'Partial' : 'Fetched') : skipped ? 'Skipped' : 'Failed'}
+                  {!sess || sess.status === 'pending' ? tr(s.lang, 'fetching') : sess.status === 'ready' ? tr(s.lang, sess.partial ? 'partial' : 'fetched') : tr(s.lang, skipped ? 'skipped' : 'failed')}
                 </span>
               </div>
               {sess?.partial && <p className="mt-2 rounded-lg bg-amber-50 px-2.5 py-1.5 text-[12px] text-amber-900">Only part of this account’s data came back. We’ll use what we have and mark it in My money.</p>}
@@ -228,9 +233,9 @@ function Verify() {
                 <div className="mt-2">
                   <p className="text-[12.5px] text-rose-700">{sess.error}</p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    <Chip onClick={() => fetchOne(a.id, true)}><RotateCcw className="mr-1 inline h-3 w-3" />Retry</Chip>
-                    <Chip onClick={() => set((st) => ({ skippedAccounts: [...st.skippedAccounts, a.id] }))}>Continue without it</Chip>
-                    <Chip onClick={() => set((st) => ({ skippedAccounts: [...st.skippedAccounts, a.id], connectStep: 'manual' }))}><PenLine className="mr-1 inline h-3 w-3" />Add manually</Chip>
+                    <Chip onClick={() => fetchOne(a.id, true)}><RotateCcw className="mr-1 inline h-3 w-3" />{tr(s.lang, 'retry')}</Chip>
+                    <Chip onClick={() => set((st) => ({ skippedAccounts: [...st.skippedAccounts, a.id] }))}>{tr(s.lang, 'continueWithout')}</Chip>
+                    <Chip onClick={() => set((st) => ({ skippedAccounts: [...st.skippedAccounts, a.id], connectStep: 'manual' }))}><PenLine className="mr-1 inline h-3 w-3" />{tr(s.lang, 'addManually')}</Chip>
                   </div>
                 </div>
               )}
@@ -240,7 +245,7 @@ function Verify() {
       </div>
       <div className="mt-auto pt-8">
         <PrimaryButton disabled={pending || unresolved.length > 0 || (ready === 0 && !s.manual.length)} onClick={() => set({ connectStep: 'check' })}>
-          {pending ? 'Fetching…' : unresolved.length ? 'Choose what to do with the failed account' : tr(s.lang, 'continue')}
+          {pending ? tr(s.lang, 'fetching') : unresolved.length ? tr(s.lang, 'chooseFailed') : tr(s.lang, 'continue')}
         </PrimaryButton>
       </div>
     </>
@@ -262,7 +267,7 @@ function DataCheck() {
     return [
       { t: 'Reading holdings', d: `${recCount} records from ${p.accountsCount} accounts${p.rejected.length ? ` · ${p.rejected.length} malformed record skipped` : ''}` },
       { t: 'Matching names to identifiers', d: `Tickers like STERLINGMOT → Sterling Motors Ltd${unmatched ? ` · ${unmatched} not recognised, kept as Other` : ''}` },
-      { t: 'Merging duplicates across accounts', d: `${merged.length ? `${merged.map((m) => m.name).join(', ')} combined from ${merged[0].sourceAccounts.length} accounts` : 'No cross-account holdings'}${dup ? ` · ${dup} double-counted import removed` : ''}` },
+      { t: 'Merging duplicates across accounts', d: `${merged.length ? `${merged.map((m) => m.name).join(', ')} combined from ${merged[0].sourceAccounts.length} accounts` : 'No cross-account holdings'}${dup ? ` · ${dup} likely duplicate import counted once` : ''}` },
       { t: 'Organising by asset type', d: `${p.holdings.length} holdings in ${classes} asset classes` },
       { t: 'Adding latest prices', d: `Demo price file${stale ? ` · ${stale} price${stale > 1 ? 's are' : ' is'} old or from a statement, marked approximate` : ''}` },
       { t: 'Running data checks (X-Ray, 7 rules)', d: `${p.xray.findings.length} finding${p.xray.findings.length === 1 ? '' : 's'} — explained on the next screen` },
@@ -278,7 +283,7 @@ function DataCheck() {
   return (
     <>
       <h1 className="mt-6 text-[22px] font-bold text-slate-900">{tr(s.lang, 'checkTitle')}</h1>
-      <p className="mt-1 text-[13.5px] text-slate-500">We show our work so you can trust the numbers.</p>
+      <p className="mt-1 text-[13.5px] text-slate-500">{tr(s.lang, 'checkSub')}</p>
       <ol className="mt-5 space-y-3">
         {lines.map((l, i) => (
           <li key={l.t} className={cx('flex gap-3 transition-opacity', i > step && 'opacity-30')}>
@@ -308,7 +313,7 @@ function Confirm() {
     <>
       <h1 className="mt-6 text-[22px] font-bold text-slate-900">{tr(s.lang, 'confirmTitle')}</h1>
       <div className="mt-4 rounded-3xl bg-ink-900 p-5 text-white">
-        <p className="text-[17px] font-semibold leading-snug">{tr(s.lang, 'weFound', { a: p.accountsCount + (s.manual.length ? 1 : 0), h: p.holdings.length, v: fmtLakh(p.totalValue) })}</p>
+        <p className="text-[17px] font-semibold leading-snug">{tr(s.lang, 'weFound', { a: p.accountsCount, h: p.holdings.length, v: fmtLakh(p.totalValue) })}{s.manual.length > 0 && <span className="block text-[13px] font-normal text-slate-300">{s.lang === 'hi' ? `इसमें ${s.manual.length} खुद जोड़ी गई प्रविष्टि शामिल है।` : `Includes ${s.manual.length} manual entr${s.manual.length > 1 ? 'ies' : 'y'}.`}</span>}</p>
         <div className="mt-3 grid grid-cols-2 gap-2 text-[12.5px]">
           {(['equity', 'debt', 'gold', 'cash', 'other'] as const).filter((k) => p.byClass[k] > 0).map((k) => (
             <div key={k} className="rounded-xl bg-white/10 px-3 py-2"><span className="text-slate-300 capitalize">{k}</span><div className="font-semibold tabular">{fmtLakh(p.byClass[k])}</div></div>
@@ -346,7 +351,7 @@ function Confirm() {
       <div className="mt-auto space-y-2 pt-8">
         <PrimaryButton onClick={() => set({ stage: 'later', laterIndex: 0, confirmed: true })}>{tr(s.lang, 'looksRight')}</PrimaryButton>
         {!editing && <PrimaryButton variant="light" onClick={() => setEditing(true)}><PenLine className="h-4 w-4" /> {tr(s.lang, 'edit')} ({p.prompts.length})</PrimaryButton>}
-        <button onClick={() => set({ connectStep: 'manual' })} className="w-full py-1 text-[13px] font-medium text-slate-500 underline cursor-pointer">Add a missing holding manually</button>
+        <button onClick={() => set({ connectStep: 'manual' })} className="w-full py-1 text-[13px] font-medium text-slate-500 underline cursor-pointer">{tr(s.lang, 'addMissing')}</button>
       </div>
     </>
   );
@@ -354,8 +359,8 @@ function Confirm() {
 
 function fixes(p: { xray: { findings: { category: string }[] } }) {
   const parts: string[] = [];
-  if (p.xray.findings.some((f) => f.category === 'duplicate')) parts.push('removed a double-counted holding');
-  if (p.xray.findings.some((f) => f.category === 'corporate-action')) parts.push('applied a stock split one source missed');
+  if (p.xray.findings.some((f) => f.category === 'duplicate')) parts.push('counted a likely duplicate holding once');
+  if (p.xray.findings.some((f) => f.category === 'corporate-action')) parts.push('applied a stock split one source appears to have missed');
   return parts.length ? parts.join(' and ') : 'reconciled the sources';
 }
 
@@ -372,7 +377,7 @@ function HandledList({ items, openFinding }: { items: QualityPrompt[]; openFindi
             <li key={q.id} className="px-4 py-3">
               <div className="text-[13.5px] font-semibold text-slate-900">{q.title}</div>
               <div className="mt-0.5 text-[12.5px] leading-snug text-slate-500">{q.detail}</div>
-              {q.findingId && <button onClick={() => openFinding(q.findingId!)} className="mt-1 text-[12.5px] font-semibold text-emerald-700 underline cursor-pointer">See the evidence</button>}
+              {q.findingId && <button onClick={() => openFinding(q.findingId!)} className="mt-0.5 min-h-8 py-1.5 text-[12.5px] font-semibold text-emerald-700 underline cursor-pointer">See the evidence</button>}
             </li>
           ))}
         </ul>
@@ -417,7 +422,7 @@ function PromptRow({ q }: { q: QualityPrompt }) {
           {(['equity', 'debt', 'gold', 'cash'] as BroadClass[]).map((c) => <Chip key={c} onClick={() => saveOverride({ broadClass: c })}>{c}</Chip>)}
         </div>
       )}
-      {q.findingId && <button onClick={() => openSheet({ type: 'finding', id: q.findingId! })} className="mt-2 text-[12.5px] font-semibold text-emerald-700 underline cursor-pointer">See the evidence</button>}
+      {q.findingId && <button onClick={() => openSheet({ type: 'finding', id: q.findingId! })} className="mt-1 min-h-8 py-1.5 text-[12.5px] font-semibold text-emerald-700 underline cursor-pointer">See the evidence</button>}
       {savedField && <p className="mt-2 text-[12px] font-medium text-emerald-700"><Check className="mr-1 inline h-3.5 w-3.5" />Saved — numbers updated.</p>}
     </div>
   );
@@ -427,12 +432,12 @@ function Declined() {
   const { s, set, startSample } = useStore();
   return (
     <>
-      <h1 className="mt-8 text-[22px] font-bold text-slate-900">No problem.</h1>
-      <p className="mt-2 text-[14.5px] text-slate-600">You can still get a picture of your money. Choose how you’d like to continue:</p>
+      <h1 className="mt-8 text-[22px] font-bold text-slate-900">{tr(s.lang, 'noProblem')}</h1>
+      <p className="mt-2 text-[14.5px] text-slate-600">{tr(s.lang, 'declinedSub')}</p>
       <div className="mt-6 space-y-2.5">
-        <PrimaryButton variant="light" onClick={() => set({ connectStep: 'manual', mode: 'manual' })}><PenLine className="h-4 w-4" /> Add holdings manually</PrimaryButton>
+        <PrimaryButton variant="light" onClick={() => set({ connectStep: 'manual', mode: 'manual' })}><PenLine className="h-4 w-4" /> {tr(s.lang, 'addHoldingsManually')}</PrimaryButton>
         <PrimaryButton variant="light" onClick={() => startSample(s.personaId === 'family-stage' ? 'family-stage' : PERSONAS[1].id)}>{tr(s.lang, 'trySample')}</PrimaryButton>
-        <PrimaryButton variant="ghost" onClick={() => set({ connectStep: 'consent' })}>Review consent again</PrimaryButton>
+        <PrimaryButton variant="ghost" onClick={() => set({ connectStep: 'consent' })}>{tr(s.lang, 'reviewConsent')}</PrimaryButton>
       </div>
     </>
   );
@@ -445,7 +450,7 @@ function Manual() {
   const [cls, setCls] = useState<BroadClass>('equity');
   const add = () => {
     if (!name || !value) return;
-    set((st) => ({ manual: [...st.manual, { id: `M-${st.manual.length + 1}`, name, value, broadClass: cls }] }));
+    set((st) => ({ manual: [...st.manual, { id: `M-${Date.now().toString(36)}`, name, value, broadClass: cls, standInFor: st.skippedAccounts.length ? [...st.skippedAccounts] : undefined }] }));
     setName(''); setValue(undefined);
   };
   const hasFetched = Object.values(s.sessions).some((x) => x.status === 'ready');

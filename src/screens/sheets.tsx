@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { EnglishOnly } from '../components/EnglishOnly';
 import {
   ArrowRight, BookOpen, Check, CheckCircle2, Code2, ExternalLink, FileText, GitCompareArrows, HelpCircle, Lightbulb,
   Printer, RotateCcw, ShieldAlert, ShieldCheck, Sparkles, Trash2, XCircle,
@@ -14,6 +15,7 @@ import { LessonCard } from './AssistantTab';
 import { DemoControls } from './DemoPanel';
 import { DISCLAIMERS, RETURN_ASSUMPTIONS } from '../config/profile';
 import { TAX_META } from '../config/tax';
+import { SAVINGS_RATE } from '../engine/normalise';
 import { fmtDate, fmtINR, fmtLakh } from '../lib/format';
 import { tr, type SKey } from '../i18n';
 import { CLASS_LABEL } from '../engine/suitability';
@@ -102,6 +104,7 @@ function FindingBody({ f }: { f: Finding }) {
         <div className="flex flex-wrap items-center gap-1.5"><SeverityBadge severity={f.severity} /><Pill>{CATEGORY_LABEL[f.category]}</Pill><Pill>Rule {f.ruleId}</Pill></div>
         <h2 className="mt-2 text-[17px] font-bold leading-snug text-slate-900">{f.title}</h2>
         <p className="mt-1 text-[14px] leading-relaxed text-slate-600">{f.summary}</p>
+        <p className="mt-1.5 text-[11.5px] text-slate-500">A possible data discrepancy flagged by a fixed rule — not proof of an error or wrongdoing. Confirm with your broker or depository.</p>
         <div className="mt-2 flex flex-wrap items-center gap-3 text-[12px] text-slate-500">
           <ConfidenceMeter confidence={f.confidence} />
           {f.impact.valueAtStake > 1 && <span>{f.impact.label}: <b className="tabular text-slate-800">{fmtINR(f.impact.valueAtStake)}</b></span>}
@@ -158,6 +161,7 @@ function TopicSheet({ id, onClose }: { id: string; onClose: () => void }) {
   const linked = d.portfolio?.xray.findings.filter((f) => f.learnTopicId === id) ?? [];
   return (
     <Sheet title={t.title} onClose={onClose}>
+      <EnglishOnly className="mb-3" />
       <div className={cx('rounded-2xl bg-gradient-to-br p-4 text-white', t.accent)}>
         <div className="text-[11px] font-semibold uppercase tracking-wider text-white/80">{t.category} · {t.minutes} min</div>
         <p className="mt-1 text-[14px]">{t.tagline}</p>
@@ -277,8 +281,8 @@ function HoldingTaxSheet({ id, onClose }: { id: string; onClose: () => void }) {
       <div className="mt-3 grid gap-1.5 text-[13px]">
         {t.annualTax > 0 && <Row k="Extra tax on its interest each year" v={fmtINR(t.annualTax)} />}
         {t.postTaxYield != null && <Row k="Yield after tax (approx.)" v={`${t.postTaxYield.toFixed(2)}%`} />}
-        <Row k="If sold today (stacked with your other holdings)" v={t.gainType === 'unknown' ? 'Unknown — cost missing' : fmtINR(t.ifSoldTax)} />
-        <Row k="Gain type" v={{ slab: 'Slab-rate gain', STCG: 'Short-term (<12 months)', LTCG: 'Long-term (≥12 months)', none: 'None', unknown: 'Unknown' }[t.gainType]} />
+        <Row k="If sold today (stacked with your other holdings)" v={t.gainType === 'unknown' ? 'Unknown — cost missing' : t.gainType === 'to-verify' ? 'Not estimated — rule to verify' : fmtINR(t.ifSoldTax)} />
+        <Row k="Gain type" v={{ slab: 'Slab-rate gain', STCG: 'Short-term (<12 months)', LTCG: 'Long-term (≥12 months)', none: 'None', unknown: 'Unknown', 'to-verify': 'Rule to verify' }[t.gainType]} />
         <Row k="Your marginal rate" v={`${(tax.marginalRate * 100).toFixed(1)}%`} />
       </div>
       {!t.verified && <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-[12px] text-amber-900"><ShieldAlert className="mr-1 inline h-3.5 w-3.5" />This rule is marked “to verify” in our tax table. Treat as an estimate only.</p>}
@@ -313,7 +317,11 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
         ) : (
           <div className="mt-3 space-y-2">
             <p className="text-[12.5px] text-rose-700">This revokes consent and deletes this session’s answers, fetched data and results from this browser.</p>
-            <PrimaryButton className="bg-rose-600 hover:bg-rose-700" onClick={() => reset({ lang: s.lang })}>Yes, revoke and delete</PrimaryButton>
+            <PrimaryButton className="bg-rose-600 hover:bg-rose-700" onClick={() => {
+              // everything this prototype stores lives in this browser's localStorage; clear our keys (incl. the earlier prototype's)
+              try { ['pxr.reviewed', 'pxr.progress'].forEach((k) => localStorage.removeItem(k)); } catch { /* storage unavailable */ }
+              reset({ lang: s.lang });
+            }}>Yes, revoke and delete</PrimaryButton>
             <PrimaryButton variant="ghost" onClick={() => setConfirmRevoke(false)}>Cancel</PrimaryButton>
           </div>
         )}
@@ -355,6 +363,8 @@ function HowSheet({ onClose }: { onClose: () => void }) {
         <div className="rounded-xl bg-amber-50 p-3 text-[12.5px] text-amber-900 ring-1 ring-amber-200">
           <b>Tax assumptions.</b> {TAX_META.disclaimer} To verify before real use:
           <ul className="mt-1 list-disc space-y-0.5 pl-5">{TAX_META.toVerify.map((x) => <li key={x}>{x}</li>)}</ul>
+          <p className="mt-2">Holdings whose rule is “to verify” — gold, REIT/InvIT, unrecognised or manually added investments, and debt funds bought before 1 April 2023 — are left out of “if sold today” estimates.</p>
+          <p className="mt-1">Modelling assumptions: savings interest {(SAVINGS_RATE * 100).toFixed(2)}% a year; FD interest is simple interest on principal; if yearly income isn’t given it is assumed to be take-home × 12 × 1.25.</p>
         </div>
         <ul className="list-disc space-y-1 pl-5 text-[12.5px] text-slate-600">{DISCLAIMERS.full.map((x) => <li key={x}>{x}</li>)}</ul>
       </div>
@@ -377,6 +387,7 @@ function ShareSheet({ onClose }: { onClose: () => void }) {
         </div>
         <div className="mt-3"><AllocationBar current={a.suit.current} target={a.suit.target} height={10} /></div>
         <p className="mt-3 text-[14px] font-semibold text-slate-900">{a.advice.headline}</p>
+        {a.advice.suggestions.length > 0 && <p className="mt-1 text-[11px] text-slate-500">Educational directions to bring the mix closer to the suggested allocation — not instructions to buy or sell:</p>}
         <ul className="mt-1 space-y-0.5 text-[12.5px] text-slate-700">{a.advice.suggestions.slice(0, 3).map((x) => <li key={x.text}>• {x.text}</li>)}</ul>
         <p className="mt-2 text-[12.5px] text-slate-600">Estimated tax on yearly interest: {fmtLakh(a.tax.annualInterestTax)} ({a.tax.regime} regime).</p>
         <p className="mt-3 text-[10.5px] leading-snug text-slate-400">{DISCLAIMERS.short} Demo data — fictional accounts.</p>
@@ -391,6 +402,7 @@ function LibrarySheet({ onClose }: { onClose: () => void }) {
   const passed = topics.filter((t) => (s.learn.quizBest[t.id] ?? 0) >= 2).length;
   return (
     <Sheet title="Lessons & quizzes" onClose={onClose}>
+      <EnglishOnly className="mb-3" />
       <div className="flex items-center justify-between rounded-2xl bg-violet-50 px-4 py-3 text-[13px] text-violet-900">
         <span><b className="tabular">{passed}</b> of {topics.length} quizzes passed</span>
         <span><b className="tabular">{s.learn.visited.length}</b> opened</span>

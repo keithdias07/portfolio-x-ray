@@ -4,7 +4,7 @@
  */
 import {
   AS_OF, PRICE_SOURCE, instrumentById, priceById, resolveSecurity,
-  type BroadClass, type DataSource, type InstrumentType, type SourceRecord, type TaxRule, type Trade,
+  type BroadClass, type DataSource, type InstrumentType, type PriceQuote, type SourceRecord, type TaxRule, type Trade,
 } from '../data/securities';
 import { runXRay, type Finding, type XRayResult } from './xray';
 import type { RawAccount, RawDocument } from './aa';
@@ -73,7 +73,11 @@ export interface CanonicalPortfolio {
 
 export interface Overrides { [holdingId: string]: { avgCost?: number; purchaseDate?: string; broadClass?: BroadClass } }
 
-export interface ManualEntry { id: string; name: string; value: number; broadClass: BroadClass }
+export interface ManualEntry {
+  id: string; name: string; value: number; broadClass: BroadClass;
+  /** accounts that were missing when this entry was added — it may stand in for them */
+  standInFor?: string[];
+}
 
 const KIND: Record<string, DataSource['kind']> = { DEMAT: 'broker', BOND_DEMAT: 'bond-platform', MUTUAL_FUNDS: 'rta' };
 
@@ -86,6 +90,7 @@ export function normalise(
   overrides: Overrides = {},
   manual: ManualEntry[] = [],
   asOf: string = AS_OF,
+  priceOf: (id: string) => PriceQuote | undefined = (id) => priceById[id],
 ): CanonicalPortfolio {
   const sources: DataSource[] = [];
   const records: SourceRecord[] = [];
@@ -158,7 +163,29 @@ export function normalise(
     }
   }
 
-  const xray = runXRay({ sources, records, trades, asOf });
+  // B13: a recognised security with no price quote can't be valued at market. Keep it visible, valued at
+  // purchase cost and clearly marked, instead of dropping it or failing the whole portfolio.
+  const unpriced: CanonicalHolding[] = [];
+  const holdingRole = new Set(sources.filter((x) => x.role === 'holding').map((x) => x.id));
+  const priced = records.filter((r) => {
+    if (priceOf(r.instrumentId)) return true;
+    if (holdingRole.has(r.sourceId) && !unpriced.some((u) => u.securityId === r.instrumentId && u.sourceAccounts[0].accountId === r.accountId)) {
+      const inst = instrumentById[r.instrumentId];
+      const value = r.avgCost != null ? r.avgCost * r.quantity : 0;
+      unpriced.push({
+        holdingId: `H-NOPRICE-${r.instrumentId}-${unpriced.length + 1}`, securityId: r.instrumentId, name: inst.name, instrumentType: inst.instrumentType,
+        broadClass: inst.broadClass, taxRule: inst.taxRule, quantity: r.quantity, avgCost: r.avgCost, costEstimated: false,
+        purchaseDate: r.purchaseDate ?? null, purchaseDateEstimated: false, currentPrice: r.avgCost ?? 0, priceDate: asOf, priceApprox: true,
+        currentValue: value, unrealisedGain: null, holdingMonths: r.purchaseDate ? monthsBetween(r.purchaseDate, asOf) : null,
+        holdingPeriodBucket: bucket(r.purchaseDate ? monthsBetween(r.purchaseDate, asOf) : null), annualInterest: 0,
+        sourceAccounts: [{ label: `${sourceLabel(sources, r.sourceId)} ${r.accountId}`, accountId: r.accountId, quantity: r.quantity }],
+        qualityFlags: ['stale-price', ...(r.avgCost == null ? (['missing-cost'] as QualityFlag[]) : [])], xrayFindingIds: [],
+        note: r.avgCost != null ? 'No current price is available, so this is valued at your purchase cost. Gain/loss is unknown.' : 'No current price or purchase cost is available, so this holding is shown at ₹0 until a price is found.',
+      });
+    }
+    return false;
+  });
+  const xray = runXRay({ sources, records: priced, trades, asOf, priceOf });
   const findingsById = Object.fromEntries(xray.findings.map((f) => [f.id, f])) as Record<string, Finding>;
 
   // merge reconciled positions across accounts (B5 step 4)
@@ -170,7 +197,7 @@ export function normalise(
   const securities: CanonicalHolding[] = [];
   for (const [secId, ps] of bySec) {
     const inst = instrumentById[secId];
-    const pq = priceById[secId];
+    const pq = priceOf(secId)!;
     const quantity = ps.reduce((s, p) => s + p.quantity, 0);
     const allCost = ps.every((p) => p.costPerUnit != null);
     const avgCost = allCost ? ps.reduce((s, p) => s + p.costPerUnit! * p.quantity, 0) / quantity : null;
@@ -193,9 +220,10 @@ export function normalise(
     });
   }
 
-  const manualHoldings: CanonicalHolding[] = manual.map((m) => cashHolding(m.id, m.name, 'Manual entry', m.broadClass, m.broadClass === 'equity' ? 'equity' : 'slab', m.value, 0, 'Added manually', 'Manual', asOf, null));
+  // manual entries: value is what the user typed; cost and gain are unknown (never shown as ₹0 gain)
+  const manualHoldings: CanonicalHolding[] = manual.map((m) => ({ ...cashHolding(m.id, m.name, 'Manual entry', m.broadClass, m.broadClass === 'equity' ? 'equity' : 'slab', m.value, 0, 'Added manually', 'Manual', asOf, null), avgCost: null, unrealisedGain: null }));
 
-  let holdings = [...securities, ...unmatched, ...cash, ...manualHoldings];
+  let holdings = [...securities, ...unpriced, ...unmatched, ...cash, ...manualHoldings];
 
   // apply user edits and estimates (A3 step 6 / B13)
   holdings = holdings.map((h) => {

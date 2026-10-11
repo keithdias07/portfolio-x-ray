@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { EnglishOnly } from '../components/EnglishOnly';
 import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Flag, Info, Rocket } from 'lucide-react';
 import { useStore, type CalcState } from '../store';
@@ -37,10 +38,11 @@ export function GrowTab() {
 
   return (
     <div className="space-y-3 px-4 pb-6 pt-4">
+      <EnglishOnly />
       <div className="flex rounded-full bg-white p-1 ring-1 ring-slate-100">
         {(['sip', 'lumpsum'] as const).map((m) => (
           <button key={m} onClick={() => update({ mode: m, amount: m === 'sip' ? 10000 : 500000 })} className={cx('flex-1 rounded-full py-2 text-[13.5px] font-semibold cursor-pointer', c.mode === m ? 'bg-ink-900 text-white' : 'text-slate-600')}>
-            {m === 'sip' ? <>Monthly <Term t="SIP">SIP</Term></> : 'Lump sum'}
+            {m === 'sip' ? 'Monthly SIP' : 'Lump sum'}
           </button>
         ))}
       </div>
@@ -56,7 +58,7 @@ export function GrowTab() {
             </div>
           ))}
         </div>
-        <p className="mt-3 flex items-start gap-1.5 text-[11.5px] text-slate-400"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Illustration using assumed returns for a {label.toLowerCase()} profile. Returns are not guaranteed and can be negative.</p>
+        <p className="mt-3 flex items-start gap-1.5 text-[11.5px] text-slate-400"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0" /> <span>Illustration using assumed returns for a {label.toLowerCase()} profile. Returns are not guaranteed and can be negative.{c.mode === 'sip' && <> What’s a <Term t="SIP">SIP</Term>?</>}</span></p>
       </div>
 
       <div className="rounded-3xl bg-white p-4 ring-1 ring-slate-100">
@@ -108,7 +110,7 @@ export function GrowTab() {
           <div className="text-[13.5px] font-semibold text-slate-900">{fmtLakh(earlier)} <span className="font-normal text-slate-500">vs {fmtLakh(r.expected)}</span></div>
         </div>
       </div>
-      {s.calc && <button onClick={() => set({ calc: null })} className="w-full text-center text-[12px] text-slate-400 underline cursor-pointer">Reset to my profile’s numbers</button>}
+      {s.calc && <button onClick={() => set({ calc: null })} className="min-h-8 w-full py-2 text-center text-[12px] text-slate-400 underline cursor-pointer">Reset to my profile’s numbers</button>}
       <p className="text-center text-[11px] text-slate-400">{tr(s.lang, 'demo')} · hypothetical illustration, not a forecast</p>
     </div>
   );
