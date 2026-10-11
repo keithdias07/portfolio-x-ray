@@ -43,3 +43,28 @@ body {
 }
 
 input[type="range"] { accent-color: #059669; }
+
+/* in-place screen transitions (no hard page changes) */
+@keyframes screen-in { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+.screen-in { animation: screen-in .28s cubic-bezier(.2,.8,.2,1) both; }
+
+@keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+.sheet-up { animation: sheet-up .3s cubic-bezier(.2,.8,.2,1) both; }
+
+/* advice card → chat: the card grows into the chat container */
+@keyframes chat-expand { from { opacity: .4; transform: scale(.96) translateY(24px); border-radius: 24px; } to { opacity: 1; transform: none; border-radius: 0; } }
+.chat-expand { animation: chat-expand .32s cubic-bezier(.2,.8,.2,1) both; transform-origin: top center; }
+
+@keyframes reveal-pop { 0% { opacity: 0; transform: scale(.9); } 60% { transform: scale(1.02); } 100% { opacity: 1; transform: none; } }
+.reveal-pop { animation: reveal-pop .5s cubic-bezier(.2,.8,.2,1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .screen-in, .sheet-up, .chat-expand, .reveal-pop, .fade-up, .slide-in { animation: none; }
+}
+
+/* shareable one-page summary */
+@media print {
+  body * { visibility: hidden; }
+  #share-print, #share-print * { visibility: visible; }
+  #share-print { position: absolute; left: 0; top: 0; width: 100%; border: none; }
+}

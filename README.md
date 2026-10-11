@@ -1,52 +1,83 @@
-# Portfolio X-Ray
+# Investor Assistant (with Portfolio X-Ray)
 
-An explainable investment-integrity and learning platform for Indian retail investors. Hackathon prototype.
+A mobile-first assistant for new and hesitant investors in India. It helps you understand your risk profile, see all your investments in one place, and get simple, educational guidance. It was built from the *Investor Assistant: User Flow and Technical Flow* design document, and the Portfolio X-Ray data checks run inside the flow.
 
-> **All data is synthetic.** Every instrument, account, identifier (prefixed `DM-`), price and statement is fictional.
-> The prototype has no connection to real brokers, depositories, RTAs or Account Aggregators, uses no AI model, and does not give investment advice.
+> **Demo mode — what is simulated:**
+> - **Account Aggregator (AA) integration is simulated.** No real AA, bank, broker, depository or RBI/SEBI system is contacted. A mock AA service in `src/engine/aa.ts` returns sample data from three fictional personas. Every person, account, identifier (prefixed `DM-`) and price is fictional.
+> - **The assistant is scripted.** It has no AI model and no LLM calls. Replies are built from fixed rules and a pre-written lesson library, and every number comes from the deterministic engines.
+> - **Tax figures are estimates.** They use the design document's stated rates and are **not independently or legally verified** (see [Tax assumptions](#tax-assumptions)).
+> - Outputs are educational suitability insights, **not personalised investment advice**.
 
 ## Run it
 
-Needs Node.js 18 or later (tested on Node 24).
+Needs Node.js 18+ (tested on Node 24).
 
 ```bash
 npm install
 npm run dev        # http://localhost:5173
 ```
 
-Other scripts:
-
 ```bash
-npm test           # rule-engine + bond-maths unit tests (Vitest)
-npm run typecheck  # TypeScript
-npm run build      # production build to dist/
-npm run preview    # serve the production build
+npm test           # 42 unit, persona and failure-path tests (Vitest)
+npm run typecheck
+npm run build
+npm run personas   # prints what each sample persona produces end to end
 ```
 
-## What's inside
+On desktop the app is shown in a phone frame. A presenter panel next to it has sample personas, account-failure switches and a restart button. On a phone, the same controls are behind the **Demo mode** pill.
 
-| Area | What it does |
+## User flow (Part A)
+
+| Step | What happens |
 |---|---|
-| **Overview** | Reconciled portfolio value next to what a naive tracker would show, a data-integrity score, allocation, the 6 synthetic sources, and a holdings table. Click any row to see where each value came from, including the raw statement lines. |
-| **Portfolio X-Ray** | 7 fixed rules produce 7 findings: duplicate holding, unapplied stock split, quantity conflict explained by a later trade, missing cost basis, stale bond price, yield mislabelled as coupon, MF unit rounding. Each finding shows evidence with the source and date of every value, numbered reasoning, possible explanations, uncertainty, verification steps and a link to the matching lesson. Findings can be marked as reviewed. |
-| **Impact Simulator** | (A) Data-interpretation scenarios: pick which source you believe for each finding and see the reported value and its plausible range. (B) Hypothetical market what-if: rate, equity, gold and REIT/InvIT sliders, with bonds and debt funds moved by modified duration. Both are clearly labelled as simulations. |
-| **Learn & Explore** | 11 lessons covering bonds, G-Secs, coupon vs yield, ETFs, mutual funds, REITs, InvITs, investment risk, corporate actions, CAS reconciliation and cost basis. Includes 4 interactive widgets, 3-question quizzes with explanations, progress tracking (localStorage), recommendations based on X-Ray findings, and links to official sources (SEBI, RBI, AMFI, NSDL, CDSL, NISM, Income Tax Dept). |
-| **Methodology** | What is real and what is simulated, the reconciliation pipeline, rule thresholds, the score formula and disclaimers. |
+| A1 Welcome | Three reassurance points, **Get started** or **Try with sample data** (3 personas), EN/हिं toggle |
+| A2 Intro questions | One per screen: life stage, age and dependents, goals (the list adapts to life stage), income type, yearly income. Each has a progress bar with time left, example chips, a "why we ask" line, **Not sure**, and a back button that keeps answers |
+| A3 Connect (simulated AA) | Why we ask → consent with toggles → choose accounts → mock OTP and per-account fetch → live data check → "We found N accounts and M holdings worth ₹X. Does this look right?" with **Edit** (missing price/date, unrecognised security, X-Ray evidence) |
+| A3 failure paths | An account fails (retry / continue without it / add manually), partial data, a timeout, consent declined (manual entry or sample data) |
+| A4 Capacity and behaviour | Income, expenses and EMIs prefilled from bank data to confirm. Emergency-fund suggestion is computed ("about ₹X"); amounts are shown in words as typed; scenario questions |
+| A5 Risk reveal | Conservative / Moderate / Aggressive, ability vs willingness, a transparency line, a kind explanation when they disagree, Retake |
+| A6 Home | Total value, allocation as one bar with target markers, a one-line verdict, a single advice card. Simple view toggle |
+| A7 Assistant | The advice card expands into the chat in place, with a seeded first message. Instrument lessons (FD, G-Secs/T-Bills, bonds, debt and equity funds, gold, PPF, NPS) show tax chips. Follow-up chips after every reply. Declines guaranteed-return and stock-tip questions |
+| A8 Grow | SIP or lump sum, cautious/expected/optimistic range, invested-vs-growth chart, after-tax and inflation toggles, a ₹1 crore milestone, "start 5 years earlier". Prefilled from the advice or the chat |
+| A9 My money | Holdings grouped by asset class, account sources shown subtly, tax chips, **Explain this**, X-Ray data checks, tax at a glance, refresh, revoke |
+| A10 Ongoing | Save and resume (localStorage), jargon tooltips, a printable one-page summary, a "re-check your profile" prompt, and lessons with quizzes (11 topics) |
 
-## Code map
+## Technical flow (Part B)
 
-- `src/data/portfolio.ts`: the single synthetic dataset (sources, records, prices, corporate actions, trades)
-- `src/engine/xray.ts`: deterministic rules engine, reconciliation and integrity score
-- `src/engine/xray.test.ts`: unit tests
-- `src/lib/bond.ts`: YTM, current yield, modified duration (simplified)
-- `src/data/learn.ts`: lessons, quizzes, official resources
-- `src/pages/*`: Overview, XRay, Simulator, Learn, Topic, Methodology
+| PDF section | Where |
+|---|---|
+| B3 Questionnaire engine | `src/config/questions.ts` (schema, branching, prefill paths) |
+| B4 Mock AA | `src/engine/aa.ts` with personas in `src/personas/*.json` (raw shapes differ per account type) |
+| B5 Normalisation | `src/engine/normalise.ts`: validate/reject, resolve names and tickers, run X-Ray, merge across accounts with weighted average cost, classify, enrich, quality prompts |
+| X-Ray rules | `src/engine/xray.ts`: 7 rules with evidence, reasoning and uncertainty |
+| B6 Risk | `src/engine/risk.ts` (capacity, tolerance, the lower one wins, life-stage adjustment) |
+| B7 Suitability | `src/engine/suitability.ts` (target by profile × life stage, drift, verdicts, concentration) |
+| B8 Tax | `src/engine/tax.ts` with config in `src/config/tax.ts` (FY 2026-27 table, source, last-verified date) |
+| B9 Calculator | `src/engine/calc.ts` (the PDF's formulas, range, after-tax, inflation, milestone) |
+| Advice builder | `src/engine/advice.ts` |
+| B10 Assistant | `src/engine/assistant.ts` (scripted; numbers only from engines) and `src/data/instruments.ts` (lesson library) |
+| B11 API surface | `src/engine/pipeline.ts` (`api` facade shaped like the endpoints; runs locally) |
+| B12 State | `src/store.tsx` (single store, persisted, derived portfolio and analysis) |
+| B13 Errors | Failed or partial fetches, unmatched securities, missing dates (estimated with a note), stale prices (≈), tax staleness check, assistant fallback, error boundary |
+| B15 Tests | `src/engine/*.test.ts`: tax stacking (rebate loss at ₹12 lakh, shared ₹1.25 lakh exemption, debt-fund slab), personas end to end, AA failures |
 
-## 3-minute demo script
+## Tax assumptions
 
-1. **Overview:** "Your apps say ₹19.19 L; X-Ray says ₹16.90 L." Click Sterling Motors to show the provenance drawer with raw lines.
-2. **X-Ray:** watch the rules run. Open the Meridian duplicate, then the Sterling split, and point out the highlighted evidence rows and the reasoning steps.
-3. Click **Simulate interpretations**, toggle "count both records" and watch the range strip move.
-4. Back on the Housing Finance finding, click the lesson card to open **Coupon vs yield**, drag the price slider, then take the quiz. Progress updates in the sidebar.
-5. **Mark as reviewed** a few findings and watch the integrity score rise.
-6. Close on **Methodology**: everything is deterministic and transparent, and the data is synthetic.
+The tax engine uses the FY 2026-27 rates **as stated in the design document**: new-regime slabs, the ₹12 lakh rebate, the ₹75,000 standard deduction, 20% equity STCG, 12.5% equity LTCG above ₹1.25 lakh, and slab rate for FD/bond interest and for debt funds bought on or after 1 April 2023. These rates have **not been independently or legally verified**. The "last verified" date in `src/config/tax.ts` is the date the document states, not a verification by this project.
+
+Flagged **to verify** (shown in the app as "Rule to verify", with `*` on tax chips and a list in *How this works*):
+
+- **Marginal relief** just above the ₹12 lakh rebate limit. This is a prototype assumption that is *not* in the design document.
+- Gold ETF and Sovereign Gold Bond treatment.
+- PPF, NPS, ELSS and 80C limits.
+- REIT/InvIT distribution components.
+- TDS thresholds and surcharge.
+
+Out of scope and estimate only: HUF, NRI, grandfathering on pre-2018 equity, and detailed loss carry-forward.
+
+## Known limitations
+
+- **No real data or backend:** no real AA, login or backend, and no AI model. The assistant uses keyword matching, so unusual phrasing gets a polite fallback with suggestion chips.
+- **Tax:** see [Tax assumptions](#tax-assumptions). Have a qualified professional review the rates before any real-world use.
+- **Hindi:** covers onboarding, the risk reveal, home and navigation. Lessons, chat and engine-generated text such as advice headlines stay in English. The Hindi copy needs a native-speaker review.
+- **Simplified bond and calculator maths:** shown as illustrations, not forecasts.

@@ -6,10 +6,9 @@
  * carries the evidence and reasoning steps that produced it.
  */
 import {
-  AS_OF, PRICE_SOURCE, corporateActions, instrumentById, priceById, records as allRecords,
-  sourceById, trades as allTrades,
-  type CorporateAction, type Instrument, type SourceRecord, type Trade,
-} from '../data/portfolio';
+  AS_OF, PRICE_SOURCE, corporateActions, instrumentById, priceById,
+  type CorporateAction, type DataSource, type Instrument, type SourceRecord, type Trade,
+} from '../data/securities';
 import { daysBetween, fmtDate, fmtINR, fmtINR2, fmtNum } from '../lib/format';
 import { yearsBetween, yieldToMaturity } from '../lib/bond';
 
@@ -75,6 +74,7 @@ export interface Position {
   accountId: string;
   quantity: number;            // reconciled estimate
   reportedQuantity: number;    // as reported by the primary source
+  purchaseDate: string | null;
   primary: SourceRecord;
   duplicates: SourceRecord[];
   reference?: SourceRecord;    // CAS line
@@ -117,14 +117,20 @@ export const MF_UNIT_TOLERANCE = 0.01;
 export const staleBand = (days: number) => Math.min(0.05, 0.001 * days);
 
 const approxEq = (a: number, b: number, tol = 1e-6) => Math.abs(a - b) <= tol;
-const srcName = (id: string) => sourceById[id]?.shortName ?? id;
+export interface XRayInput {
+  sources: DataSource[];
+  records: SourceRecord[];
+  trades: Trade[];
+  actions?: CorporateAction[];
+  asOf?: string;
+}
 
-export function runXRay(
-  records: SourceRecord[] = allRecords,
-  actions: CorporateAction[] = corporateActions,
-  trades: Trade[] = allTrades,
-  asOf: string = AS_OF,
-): XRayResult {
+export function runXRay(input: XRayInput): XRayResult {
+  const { records, trades } = input;
+  const actions = input.actions ?? corporateActions;
+  const asOf = input.asOf ?? AS_OF;
+  const sourceById = Object.fromEntries(input.sources.map((s) => [s.id, s])) as Record<string, DataSource>;
+  const srcName = (id: string) => sourceById[id]?.shortName ?? id;
   const findings: Finding[] = [];
   const positions: Position[] = [];
   let fid = 0;
@@ -422,7 +428,7 @@ export function runXRay(
         evidence: [
           { source: PRICE_SOURCE, field: 'Last traded price', value: fmtINR2(price), asOf: pq.priceDate, flag: true },
           { source: 'Portfolio valuation date', field: 'As of', value: fmtDate(asOf), asOf },
-          { source: primarySrc.name, sourceId: primary.sourceId, field: 'Quoted in statement', value: primary.raw.split('|').pop()!.trim(), asOf: primarySrc.asOf, raw: primary.raw },
+          { source: primarySrc.name, sourceId: primary.sourceId, field: 'Holding in statement', value: `${fmtNum(primary.quantity)} ${inst.unit} (statement shows no newer price)`, asOf: primarySrc.asOf, raw: primary.raw },
         ],
         reasoning: [
           `Price age = ${staleDays} calendar days (threshold: ${STALE_DAYS}).`,
@@ -499,7 +505,7 @@ export function runXRay(
     const costValue = costPerUnit != null ? costPerUnit * quantity : null;
     const value = quantity * price;
     positions.push({
-      key, instrument: inst, accountId: primary.accountId, quantity, reportedQuantity: primary.quantity,
+      key, instrument: inst, accountId: primary.accountId, quantity, reportedQuantity: primary.quantity, purchaseDate: primary.purchaseDate ?? null,
       primary, duplicates, reference: ref, price, priceDate: pq.priceDate, value,
       costPerUnit, costValue, unrealized: costValue != null ? value - costValue : null, findingIds,
     });

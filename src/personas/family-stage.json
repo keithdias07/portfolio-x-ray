@@ -1,0 +1,98 @@
+{
+  "id": "family-stage",
+  "displayName": "Kavya (sample)",
+  "tagline": "38 · family stage · home loan · two children",
+  "answers": {
+    "lifeStage": "family",
+    "age": 38,
+    "dependents": 2,
+    "goals": ["child-education", "home", "retirement"],
+    "incomeType": "salaried",
+    "grossAnnual": 2400000,
+    "monthlyIncome": 142000,
+    "monthlyExpenses": 68000,
+    "monthlyEmi": 45000,
+    "emergencyMonths": 6,
+    "insurance": ["term", "health"],
+    "fall20": "hold",
+    "pickPortfolio": "B",
+    "pastBehaviour": "held"
+  },
+  "accounts": [
+    {
+      "id": "acc-brk-a", "type": "DEMAT", "fip": "Demo Broker A", "maskedId": "DP ••4471", "asOf": "2026-10-09",
+      "holdings": [
+        { "isin": "DM-EQ-AUR01", "name": "Aurora Infotech Ltd", "qty": 150, "avgPrice": 1432.0, "firstBuyDate": "2024-03-12" },
+        { "isin": "DM-EQ-MER01", "name": "Meridian Bank Ltd", "qty": 200, "avgPrice": 1580.0, "firstBuyDate": "2023-07-20" },
+        { "isin": "DM-ETF-N5001", "name": "Demo Nifty-50 Index ETF", "qty": 400, "avgPrice": 241.3, "firstBuyDate": "2022-11-02" },
+        { "isin": "DM-ETF-GLD01", "name": "Demo Gold ETF", "qty": 250, "avgPrice": 61.2, "firstBuyDate": "2023-01-16" },
+        { "isin": "DM-REIT-OFC01", "name": "Demo Office Parks REIT", "qty": 300, "avgPrice": 318.0, "firstBuyDate": "2024-06-05" }
+      ],
+      "trades": [
+        { "isin": "DM-EQ-AUR01", "date": "2026-10-06", "side": "BUY", "qty": 30, "price": 1512.0 },
+        { "isin": "DM-ETF-N5001", "date": "2026-08-18", "side": "BUY", "qty": 100, "price": 255.1 }
+      ]
+    },
+    {
+      "id": "acc-brk-b", "type": "DEMAT", "fip": "Demo Broker B", "maskedId": "DP ••9025", "asOf": "2026-10-08",
+      "holdings": [
+        { "symbol": "STERLINGMOT", "name": "STERLING MOTORS LTD", "qty": 80, "avgPrice": 2100.0, "firstBuyDate": "2021-05-10" },
+        { "symbol": "KAVERIPHRM", "name": "KAVERI PHARMA LTD", "qty": 60, "avgPrice": null, "firstBuyDate": null, "remark": "Off-market transfer-in on 14-Feb-2025 (gift from family member)" },
+        { "symbol": "DECCANPWR", "name": "DECCAN POWER LTD", "qty": 300, "avgPrice": 288.0, "firstBuyDate": null },
+        { "symbol": "DEMONIFTY", "name": "DEMO NIFTY 50 ETF", "qty": 100, "avgPrice": 262.0, "firstBuyDate": "2025-09-01" },
+        { "name": "DEMO HIGHWAYS INVIT", "qty": 500, "avgPrice": 131.5, "firstBuyDate": "2025-01-20" },
+        { "symbol": "NILGIRISME", "name": "NILGIRI SME TEXTILES", "qty": 40, "avgPrice": 92.0, "firstBuyDate": "2024-08-08", "lastPrice": 85.0 }
+      ]
+    },
+    {
+      "id": "acc-bond", "type": "BOND_DEMAT", "fip": "Demo Bond Platform", "maskedId": "DP ••6610", "asOf": "2026-10-09",
+      "holdings": [
+        { "isin": "DM-GS-2034", "name": "7.10% GS 2034 (Demo)", "qty": 500, "avgPrice": 99.4, "firstBuyDate": "2024-04-22" },
+        { "isin": "DM-NCD-INF29", "name": "Demo Infra Fin 8.40% 2029", "qty": 40, "avgPrice": 1000.0, "firstBuyDate": "2024-12-01" },
+        { "isin": "DM-NCD-HSG31", "name": "Demo Housing Fin 7.95% 2031", "qty": 50, "avgPrice": 975.0, "firstBuyDate": "2025-03-10", "reportedYieldPct": 7.95 }
+      ]
+    },
+    {
+      "id": "acc-mf", "type": "MUTUAL_FUNDS", "fip": "Demo RTA", "maskedId": "Folio ••3318", "asOf": "2026-10-09",
+      "schemes": [
+        { "schemeName": "Demo Flexi Cap Fund - Direct - Growth", "units": 1245.632, "costValue": 122595.1, "firstPurchaseDate": "2021-08-10" },
+        { "schemeName": "Demo Short Duration Fund - Direct - Growth", "units": 2860.115, "costValue": 117493.52, "firstPurchaseDate": "2023-06-15" }
+      ]
+    },
+    {
+      "id": "acc-bank", "type": "DEPOSIT", "fip": "Demo Bank", "maskedId": "SB ••2207", "asOf": "2026-10-09",
+      "balance": 310000,
+      "summary": { "avgMonthlySalaryCredit": 142000, "monthlySipDebits": 25000, "monthlyEmiDebits": 45000, "avgMonthlySpend": 68000 }
+    },
+    {
+      "id": "acc-fd", "type": "TERM_DEPOSIT", "fip": "Demo Bank", "maskedId": "FD ••5531", "asOf": "2026-10-09",
+      "principal": 250000, "ratePct": 7.1, "startDate": "2025-11-15", "maturityDate": "2027-11-15"
+    }
+  ],
+  "documents": [
+    {
+      "id": "doc-csv", "type": "MANUAL_IMPORT", "name": "Tracker app CSV", "asOf": "2026-10-05",
+      "rows": [ { "name": "MERIDIAN BK LTD", "isin": "DM-EQ-MER01", "account": "DP ••4471", "qty": 200, "avgPrice": 1580 } ]
+    },
+    {
+      "id": "doc-cas", "type": "CAS", "name": "Monthly depository statement (CAS)", "asOf": "2026-09-30",
+      "lines": [
+        { "account": "DP ••4471", "isin": "DM-EQ-AUR01", "name": "AURORA INFOTECH LIMITED", "qty": 120 },
+        { "account": "DP ••4471", "isin": "DM-EQ-MER01", "name": "MERIDIAN BANK LIMITED", "qty": 200 },
+        { "account": "DP ••4471", "isin": "DM-ETF-N5001", "name": "DEMO NIFTY 50 ETF", "qty": 400 },
+        { "account": "DP ••4471", "isin": "DM-ETF-GLD01", "name": "DEMO GOLD ETF", "qty": 250 },
+        { "account": "DP ••4471", "isin": "DM-REIT-OFC01", "name": "DEMO OFFICE PARKS REIT", "qty": 300 },
+        { "account": "DP ••9025", "isin": "DM-EQ-STM01", "name": "STERLING MOTORS LIMITED", "qty": 160 },
+        { "account": "DP ••9025", "isin": "DM-EQ-KAV01", "name": "KAVERI PHARMA LIMITED", "qty": 60 },
+        { "account": "DP ••9025", "isin": "DM-EQ-DEC01", "name": "DECCAN POWER LIMITED", "qty": 300 },
+        { "account": "DP ••9025", "isin": "DM-ETF-N5001", "name": "DEMO NIFTY 50 ETF", "qty": 100 },
+        { "account": "DP ••9025", "isin": "DM-INVIT-HWY01", "name": "DEMO HIGHWAYS INVIT", "qty": 500 },
+        { "account": "DP ••6610", "isin": "DM-GS-2034", "name": "GOI 7.10% 2034 (DEMO)", "qty": 500 },
+        { "account": "DP ••6610", "isin": "DM-NCD-INF29", "name": "DEMO INFRA FIN 8.40% NCD 2029", "qty": 40 },
+        { "account": "DP ••6610", "isin": "DM-NCD-HSG31", "name": "DEMO HOUSING FIN 7.95% 2031", "qty": 50 },
+        { "account": "Folio ••3318", "isin": "DM-MF-FLX01", "name": "Demo Flexi Cap Fund - Direct Plan - Growth", "qty": 1245.63 },
+        { "account": "Folio ••3318", "isin": "DM-MF-SDF01", "name": "Demo Short Duration Fund - Direct Plan - Growth", "qty": 2860.115 }
+      ]
+    }
+  ]
+}
