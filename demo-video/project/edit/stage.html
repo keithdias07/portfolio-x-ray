@@ -1,0 +1,256 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0b1220; font-family: 'Segoe UI', 'Segoe UI Variable', Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+  .abs { position: absolute; }
+  #bg { inset: 0; background: radial-gradient(1200px 800px at 75% 40%, #e6f7f0 0%, #eef3f8 45%, #e3e9f2 100%); }
+  #bgdeco { inset: 0; background: radial-gradient(600px 600px at 1290px 540px, rgba(16,185,129,.16), transparent 70%); }
+  #phonewrap { left: 0; top: 0; width: 1920px; height: 1080px; }
+  #device { left: 1052px; top: 39px; width: 476px; height: 1002px; border-radius: 60px; background: #0d1424; box-shadow: 0 40px 90px rgba(15,23,42,.35), 0 0 0 2px #2a3550 inset; }
+  #screenbox { left: 1064px; top: 51px; width: 452px; height: 978px; border-radius: 48px; overflow: hidden; background: #f6f8fb; }
+  #screen { width: 452px; height: 978px; display: block; }
+  #broll { inset: 0; overflow: hidden; }
+  #broll img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 50% 50%; }
+  #brollShade { inset: 0; }
+  #panel { left: 140px; top: 0; width: 760px; height: 1080px; }
+  .eyebrow { font-size: 22px; letter-spacing: .14em; font-weight: 700; color: #059669; text-transform: uppercase; }
+  .title { font-size: 56px; line-height: 1.12; font-weight: 700; color: #0f172a; letter-spacing: -.01em; margin-top: 18px; }
+  .items { margin-top: 30px; display: flex; flex-direction: column; gap: 16px; }
+  .item { font-size: 28px; color: #334155; display: flex; gap: 14px; align-items: baseline; line-height: 1.3; }
+  .item b { color: #0f172a; font-weight: 600; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #10b981; flex: none; transform: translateY(-4px); }
+  .foot { font-size: 22px; color: #64748b; line-height: 1.4; }
+  .badge { display: inline-flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 700; color: #92400e; background: #fef3c7; border: 2px solid #fcd34d; padding: 8px 16px; border-radius: 999px; }
+  .callout { font-size: 25px; font-weight: 700; color: #fff; background: #0f172a; padding: 10px 18px; border-radius: 14px; box-shadow: 0 10px 30px rgba(15,23,42,.25); white-space: nowrap; }
+  .callout.amber { background: #b45309; }
+  .callout.green { background: #047857; }
+  #lines { left: 0; top: 0; width: 1920px; height: 1080px; overflow: visible; }
+  .center { left: 0; width: 1920px; text-align: center; color: #fff; }
+  .ctitle { font-size: 68px; font-weight: 700; letter-spacing: -.01em; text-shadow: 0 4px 30px rgba(0,0,0,.45); }
+  .csub { font-size: 34px; font-weight: 400; color: #e2e8f0; margin-top: 18px; text-shadow: 0 2px 16px rgba(0,0,0,.5); }
+  .hook { font-size: 64px; font-weight: 700; color: #fff; line-height: 1.15; text-shadow: 0 4px 30px rgba(0,0,0,.5); }
+  .chips { display: flex; flex-wrap: wrap; gap: 14px; width: 1100px; margin-top: 28px; }
+  .chip { font-size: 28px; font-weight: 600; color: #0f172a; background: rgba(255,255,255,.94); border-radius: 999px; padding: 10px 22px; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+  .tag { font-size: 18px; color: rgba(255,255,255,.85); background: rgba(15,23,42,.55); padding: 6px 12px; border-radius: 8px; letter-spacing: .03em; }
+  #sub { max-width: 1400px; text-align: center; }
+  #sub span { display: inline-block; font-size: 34px; line-height: 1.35; font-weight: 600; color: #fff; background: rgba(10,15,30,.78); padding: 10px 24px 12px; border-radius: 14px; white-space: pre-line; }
+  .closing-row { display: flex; align-items: baseline; gap: 28px; justify-content: center; }
+  .cword { font-size: 64px; font-weight: 800; letter-spacing: .05em; color: #34d399; width: 600px; text-align: right; }
+  .cdesc { font-size: 36px; color: #f1f5f9; width: 760px; text-align: left; font-weight: 500; }
+  .logo { width: 120px; height: 120px; border-radius: 30px; background: linear-gradient(135deg, #10b981, #06b6d4); display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 20px 50px rgba(16,185,129,.35); }
+</style></head>
+<body>
+<div id="bg" class="abs"></div><div id="bgdeco" class="abs"></div>
+
+<div id="panel" class="abs"></div>
+
+<div id="phonewrap" class="abs">
+  <div id="device" class="abs"></div>
+  <div id="screenbox" class="abs"><img id="screen"></div>
+</div>
+
+<svg id="lines" class="abs"></svg>
+<div id="callouts" class="abs" style="inset:0"></div>
+
+<div id="broll" class="abs"><img id="brollimg"></div>
+<div id="brollShade" class="abs"></div>
+<div id="over" class="abs" style="inset:0"></div>
+<div id="sub" class="abs"><span></span></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const ease = (k) => k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+// opacity window: fade in over d at a, fade out over d before b
+const win = (t, a, b, d = 0.4) => clamp(Math.min((t - a) / d, (b - t) / d));
+const rise = (t, a, d = 0.5) => { const k = ease(clamp((t - a) / d)); return `opacity:${k};transform:translateY(${(1 - k) * 18}px)`; };
+const VERIFY = { from: 53.1, y: 583 }; // set after measuring take3
+const S = 452 / 390; // screen px per app CSS px
+const SX = 1064, SY = 51;
+const toPage = (x, y, zoom) => { let px = SX + x * S, py = SY + y * S; if (zoom) { px = zoom.ox + (px - zoom.ox) * zoom.z; py = zoom.oy + (py - zoom.oy) * zoom.z; } return [px, py]; };
+const LOGO = `<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#0b1220" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/><path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/></svg>`;
+
+let D; // data injected: { shots, frames, appDir, brollDir, cues }
+function shotAt(t) { return D.shots.find((s) => t >= s.from && t < s.to) || D.shots[D.shots.length - 1]; }
+function appFrame(src) { const F = D.frames; let lo = 0, hi = F.length - 1; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (F[m].t <= src) lo = m; else hi = m - 1; } return F[lo].name; }
+async function setImg(el, url) { if (el.dataset.u === url) return; el.dataset.u = url; el.src = url; try { await el.decode(); } catch (e) {} }
+
+// ------------- left panel content per app scene -------------
+function panel(t) {
+  const P = [];
+  const block = (a, b, html) => { if (t >= a - 0.1 && t <= b + 0.1) P.push(`<div class="abs" style="left:0;top:0;width:760px;height:1080px;opacity:${win(t, a, b, 0.45)}">${html}</div>`); };
+  // Scene 3
+  block(25.2, 38.0, `<div class="abs" style="top:230px;width:760px">
+    <div class="eyebrow" style="${rise(t, 25.3)}">Meet Investor Assistant</div>
+    <div class="title" style="${rise(t, 25.5)}">Starts with the person, not the portfolio.</div>
+    <div class="items">
+      <div class="item" style="${rise(t, 27.4)}"><span class="dot"></span><span><b>16 short questions</b> — goals, life stage, income, emergencies</span></div>
+      <div class="item" style="${rise(t, 31.9)}"><span class="dot"></span><span><b>Simulated account connection</b> — consent, OTP, fetch</span></div>
+    </div>
+    <div style="margin-top:40px;${rise(t, 32.6)}"><span class="badge">● Demo mode — simulated financial data</span></div>
+  </div>`);
+  // Scene 4
+  block(38.2, 55.0, `<div class="abs" style="top:150px;width:760px">
+    <div class="eyebrow" style="${rise(t, 38.3)}">USP 1 · Explainable Portfolio X-Ray</div>
+    <div class="title" style="${rise(t, 38.5)}">Don’t just flag it.<br>Explain it.</div>
+    <div class="item" style="margin-top:22px;${rise(t, 39.4)}"><span class="dot"></span><span>7 rule-based data checks — not AI</span></div>
+  </div>`);
+  // Scene 5
+  block(55.2, 66.5, `<div class="abs" style="top:220px;width:760px">
+    <div class="eyebrow" style="${rise(t, 55.3)}">Risk profile & suitability</div>
+    <div class="title" style="${rise(t, 55.5)}">Ability vs. willingness —<br>the lower one wins.</div>
+    <div class="items">
+      <div class="item" style="${rise(t, 56.6)}"><span class="dot"></span><span><b>Capacity:</b> horizon, EMIs, emergency buffer</span></div>
+      <div class="item" style="${rise(t, 57.6)}"><span class="dot"></span><span><b>Tolerance:</b> how you’d react to a fall</span></div>
+      <div class="item" style="${rise(t, 60.2)}"><span class="dot"></span><span><b>Fit check:</b> your mix vs. a suggested range</span></div>
+    </div>
+    <div class="foot" style="margin-top:34px;${rise(t, 61)}">Educational insight — not personalised investment advice.</div>
+  </div>`);
+  // Scene 6 (app part)
+  block(70.1, 81.5, `<div class="abs" style="top:210px;width:760px">
+    <div class="eyebrow" style="${rise(t, 70.2)}">USP 2 · Learn & Explore</div>
+    <div class="title" style="${rise(t, 70.4)}">Short lessons. Worked examples. Quick quizzes.</div>
+    <div class="items">
+      <div class="item" style="${rise(t, 71.6)}"><span class="dot"></span><span><b>15 lessons</b> — basics, bonds & G-Secs, funds, REITs & InvITs, risk, tax</span></div>
+      <div class="item" style="${rise(t, 72.6)}"><span class="dot"></span><span>Linked to what X-Ray found in <i>your</i> accounts</span></div>
+      <div class="item" style="${rise(t, 75.6)}"><span class="dot"></span><span>Instant feedback — and progress you can see</span></div>
+    </div>
+  </div>`);
+  // Scene 7 grow
+  block(83.6, 90.5, `<div class="abs" style="top:230px;width:760px">
+    <div class="eyebrow" style="${rise(t, 83.7)}">Plan</div>
+    <div class="title" style="${rise(t, 83.9)}">See a range — not a promise.</div>
+    <div class="items">
+      <div class="item" style="${rise(t, 84.8)}"><span class="dot"></span><span>Cautious · expected · optimistic</span></div>
+      <div class="item" style="${rise(t, 86.0)}"><span class="dot"></span><span>In today’s money, after inflation</span></div>
+      <div class="item" style="${rise(t, 87.4)}"><span class="dot"></span><span>Estimated tax, where the rule is supported</span></div>
+    </div>
+    <div class="foot" style="margin-top:34px;${rise(t, 88)}">Assumed returns. Not guaranteed.</div>
+  </div>`);
+  // Scene 7 explore
+  block(90.6, 97.0, `<div class="abs" style="top:230px;width:760px">
+    <div class="eyebrow" style="${rise(t, 90.7)}">Explore investments</div>
+    <div class="title" style="${rise(t, 90.9)}">Benefits, risks and tax — side by side.</div>
+    <div class="items">
+      <div class="item" style="${rise(t, 91.6)}"><span class="dot"></span><span>FDs · G-Secs & T-Bills · bonds · funds · stocks · gold</span></div>
+      <div class="item" style="${rise(t, 92.6)}"><span class="dot"></span><span><b>REITs vs InvITs</b>, compared</span></div>
+      <div class="item" style="${rise(t, 93.6)}"><span class="dot"></span><span>Unverified tax rules flagged “to verify”</span></div>
+    </div>
+  </div>`);
+  return P.join('');
+}
+
+// ------------- callouts pointing at real UI (scene 4 + quiz) -------------
+function callouts(t, shot) {
+  const C = []; const L = [];
+  const add = (a, b, label, cls, lx, ly, x, y, zoom) => {
+    const o = win(t, a, b, 0.35); if (o <= 0) return;
+    const [px, py] = toPage(x, y, zoom);
+    C.push(`<div class="abs callout ${cls}" style="left:${lx}px;top:${ly}px;opacity:${o};transform:translateY(${(1 - o) * 10}px)">${label}</div>`);
+    const w = label.length * 13.5 + 36; const sx = lx + w, sy = ly + 24;
+    L.push(`<g opacity="${o}"><path d="M${sx} ${sy} C ${sx + 60} ${sy}, ${px - 60} ${py}, ${px - 6} ${py}" stroke="#0f172a" stroke-width="3" fill="none" stroke-dasharray="2 0"/><circle cx="${px}" cy="${py}" r="9" fill="#10b981" stroke="#fff" stroke-width="3"/></g>`);
+  };
+  const z = shot.zoom;
+  // finding sheet: targets are app CSS coords; the sheet scrolls 360px at ~46.0–48.1 and 820px at ~50.6–53.0
+  add(44.0, 46.0, 'Potential discrepancy', 'amber', 560, 420, 18, 178, z);
+  add(44.6, 46.0, 'Evidence', '', 700, 560, 18, 482, z);
+  add(48.3, 50.5, 'Why it may matter', '', 600, 640, 18, 448, z);
+  add(VERIFY.from, 55.0, 'What to verify next', 'green', 580, 740, 18, VERIFY.y, z);
+  add(79.6, 81.5, 'Quiz: 3/3 — Mastered', 'green', 560, 640, 40, 590, z);
+  return { html: C.join(''), svg: L.join('') };
+}
+
+// ------------- full-screen overlays on B-roll -------------
+function over(t) {
+  const O = [];
+  // Scene 1 hook
+  if (t < 9.6) O.push(`<div class="abs" style="left:140px;top:330px;width:1000px">
+     <div class="hook" style="${rise(t, 1.0, 0.7)};opacity:${Math.min(ease(clamp((t - 1) / .7)), win(t, 1, 9.3, .5))}">Investing is confusing enough.</div>
+     <div class="hook" style="margin-top:14px;color:#6ee7b7;${rise(t, 3.0, 0.7)};opacity:${Math.min(ease(clamp((t - 3) / .7)), win(t, 3, 9.3, .5))}">Understanding your portfolio<br>shouldn’t be.</div></div>`);
+  // Scene 2 title card
+  if (t >= 9.8 && t < 16.6) O.push(`<div class="abs center" style="top:380px;opacity:${win(t, 10.0, 16.4, .6)}">
+     <div class="ctitle" style="${rise(t, 10.0, .8)}">Shaped by real-world financial insight</div>
+     <div class="csub" style="${rise(t, 11.2, .8)}">Requirements informed by consultation with a chartered accountant</div></div>`);
+  // Scene 2 chips
+  if (t >= 16.5 && t < 25.1) {
+    const chips = ['Does the portfolio fit the risk profile?', 'A simple investment calculator', 'Tax visible for each instrument', 'REITs, InvITs & Government Securities', 'Pros and cons of each investment', 'Liquidity, income, emergency & medical backup', 'Conservative vs. aggressive preferences', 'Financial literacy: do’s and don’ts'];
+    O.push(`<div class="abs" style="left:140px;top:250px;opacity:${win(t, 16.6, 24.8, .5)}">
+      <div class="eyebrow" style="color:#6ee7b7;${rise(t, 16.7)}">What the CA consultation highlighted</div>
+      <div class="chips">${chips.map((c, i) => `<div class="chip" style="${rise(t, 17.2 + i * 0.75, .45)}">${c}</div>`).join('')}</div></div>`);
+  }
+  if (t >= 9.5 && t < 25.0) O.push(`<div class="abs tag" style="right:40px;top:36px;opacity:${win(t, 9.6, 24.9, .4)}">Illustrative stock footage — not our actual meeting</div>`);
+  // Scene 6 headline on b-roll
+  if (t >= 66.5 && t < 70.1) O.push(`<div class="abs center" style="top:430px;opacity:${win(t, 66.7, 69.9, .45)}"><div class="ctitle" style="${rise(t, 66.7, .7)}">From confusion to understanding.</div></div>`);
+  // Scene 8 closing
+  if (t >= 97.0 && t < 103.6) {
+    const rows = [['DETECT', 'Explainable Portfolio X-Ray', 97.5], ['UNDERSTAND', 'Learn & Explore', 98.4], ['PLAN', 'Risk profile, investment calculator and educational guidance', 99.45]];
+    O.push(`<div class="abs" style="left:0;top:320px;width:1920px;opacity:${win(t, 97.2, 103.4, .5)};display:flex;flex-direction:column;gap:42px">
+      ${rows.map(([w, d, a]) => `<div class="closing-row" style="${rise(t, a, .6)}"><div class="cword">${w}</div><div class="cdesc">${d}</div></div>`).join('')}</div>`);
+  }
+  if (t >= 103.3) {
+    const o = ease(clamp((t - 103.4) / .8));
+    O.push(`<div class="abs center" style="top:250px;opacity:${o}">
+      <div class="logo" style="${rise(t, 103.5, .7)}">${LOGO}</div>
+      <div style="font-size:88px;font-weight:800;letter-spacing:-.015em;margin-top:34px;${rise(t, 103.7, .7)}">Investor Assistant</div>
+      <div class="csub" style="font-size:36px;margin-top:20px;${rise(t, 104.2, .7)}">Understand your money. Question the numbers.<br>Make more informed decisions.</div>
+      <div style="font-size:28px;color:#6ee7b7;margin-top:40px;font-weight:600;${rise(t, 104.8, .7)}">portfolio-x-ray-roan.vercel.app</div>
+      <div style="font-size:20px;color:#94a3b8;margin-top:22px;${rise(t, 105.2, .7)}">Hackathon prototype · simulated demo data · educational, not investment advice</div></div>`);
+  }
+  return O.join('');
+}
+
+window.frame = async (t) => {
+  const shot = shotAt(t);
+  // b-roll layer (with short fades to/from app shots)
+  const br = $('#broll'), bi = $('#brollimg'), sh = $('#brollShade');
+  const isB = shot.kind === 'broll';
+  let bOp = 0, bShot = null;
+  if (isB) { bShot = shot; bOp = 1; const i = D.shots.indexOf(shot); const prev = D.shots[i - 1], next = D.shots[i + 1];
+    if (prev && prev.kind === 'app') bOp = Math.min(bOp, clamp((t - shot.from) / 0.5));
+    if (next && next.kind === 'app') bOp = Math.min(bOp, clamp((shot.to - t) / 0.5)); }
+  br.style.opacity = bOp; sh.style.opacity = bOp;
+  if (bShot) {
+    const k = (t - bShot.from) / (bShot.to - bShot.from);
+    const idx = Math.min(D.brollCount[bShot.dir], Math.max(1, Math.floor((t - bShot.from) * 30) + 1));
+    await setImg(bi, `${D.brollDir}/${bShot.dir}/${String(idx).padStart(4, '0')}.jpg`);
+    const z = bShot.kb[0] + (bShot.kb[1] - bShot.kb[0]) * k;
+    bi.style.transform = `scale(${z})`;
+    sh.style.background = bShot.dir === 'b1'
+      ? `linear-gradient(90deg, rgba(5,10,20,${bShot.dim + .25}) 0%, rgba(5,10,20,${bShot.dim}) 45%, rgba(5,10,20,.15) 100%)`
+      : `rgba(5,10,20,${bShot.dim})`;
+  }
+  // app layer: show the app shot in effect (or nearest neighbour while b-roll fades)
+  let aShot = shot.kind === 'app' ? shot : null;
+  if (!aShot && bOp < 1) { const i = D.shots.indexOf(shot); aShot = [D.shots[i - 1], D.shots[i + 1]].find((s) => s && s.kind === 'app' && Math.abs((t < shot.from + 1 ? s.to : s.from) - t) < 1); }
+  const pw = $('#phonewrap');
+  if (aShot) {
+    const tt = Math.min(Math.max(t, aShot.from), aShot.to - 1e-3);
+    const src = aShot.src + (tt - aShot.from) * aShot.speed;
+    await setImg($('#screen'), `${D.appDir}/${appFrame(src)}`);
+    // phone entrance at the first app shot
+    const ent = ease(clamp((t - 25.0) / 0.8));
+    let tr = `translateY(${(1 - ent) * 60}px)`;
+    if (aShot.zoom) { const zk = ease(clamp((t - aShot.from) / 0.8)); const prevZ = D.shots[D.shots.indexOf(aShot) - 1]?.zoom; const z = prevZ ? aShot.zoom.z : 1 + (aShot.zoom.z - 1) * zk; pw.style.transformOrigin = `${aShot.zoom.ox}px ${aShot.zoom.oy}px`; tr += ` scale(${z})`; aShot = { ...aShot, zoom: { ...aShot.zoom, z } }; }
+    else pw.style.transformOrigin = '1290px 40px';
+    pw.style.transform = tr;
+    pw.style.opacity = 1;
+  }
+  $('#panel').innerHTML = panel(t);
+  const c = callouts(t, aShot || shot);
+  $('#callouts').innerHTML = c.html; $('#lines').innerHTML = c.svg;
+  $('#over').innerHTML = over(t);
+  // subtitles
+  const cue = D.cues.find((q) => t >= q.from && t < q.to);
+  const sub = $('#sub'), sp = sub.querySelector('span');
+  if (cue) {
+    sp.textContent = cue.text; sub.style.opacity = Math.min(1, (t - cue.from) / 0.12, (cue.to - t) / 0.12);
+    const onApp = !isB || bOp < 0.5;
+    if (onApp && t > 25 && t < 97) { sub.style.left = '140px'; sub.style.width = '800px'; sub.style.textAlign = 'left'; sub.style.top = ''; sub.style.bottom = '64px'; }
+    else { sub.style.left = '260px'; sub.style.width = '1400px'; sub.style.textAlign = 'center'; sub.style.bottom = '64px'; }
+  } else sub.style.opacity = 0;
+  return true;
+};
+window.init = (data) => { D = data; return true; };
+</script>
+</body></html>

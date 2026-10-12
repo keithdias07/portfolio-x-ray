@@ -1,0 +1,8 @@
+# Large media stays out of Git; scripts, script text, subtitles and notes are fine to commit.
+*.mp4
+*.wav
+*.mp3
+*.jpg
+*.png
+assets/broll/
+assets/frames/
