@@ -240,4 +240,3 @@ export function LessonCard({ id, compact }: { id: string; compact?: boolean }): 
     </div>
   );
 }
-

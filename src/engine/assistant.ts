@@ -241,4 +241,3 @@ export function respond(input: string, c: Ctx): ChatMessage {
 function fallback(c: Ctx): ChatMessage {
   return msg([{ kind: 'text', text: 'That’s outside what I can help with here. I can explain your mix, your risk profile, tax on your holdings, or what different investments involve.' }], defaultChips(c));
 }
-
