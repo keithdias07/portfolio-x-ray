@@ -1,0 +1,54 @@
+{
+  "id": "young-starter",
+  "displayName": "Riya (sample)",
+  "tagline": "26 · just starting out · first job",
+  "answers": {
+    "lifeStage": "starting",
+    "age": 26,
+    "dependents": 0,
+    "goals": ["wealth", "home", "emergency"],
+    "horizon": "10+",
+    "incomeNeed": "no",
+    "experience": "<2",
+    "incomeType": "salaried",
+    "grossAnnual": 900000,
+    "monthlyIncome": 62000,
+    "monthlyExpenses": 29000,
+    "monthlyEmi": 0,
+    "emergencyMonths": 4,
+    "insurance": ["health"],
+    "fall20": "buy-more",
+    "pickPortfolio": "C",
+    "pastBehaviour": "not-invested"
+  },
+  "accounts": [
+    {
+      "id": "acc-brk-c", "type": "DEMAT", "fip": "Demo Broker C", "maskedId": "DP ••1180", "asOf": "2026-10-09",
+      "holdings": [
+        { "isin": "DM-ETF-N5001", "name": "Demo Nifty-50 Index ETF", "qty": 120, "avgPrice": 250.4, "firstBuyDate": "2025-02-03" },
+        { "symbol": "AURORAINFO", "name": "Aurora Infotech Ltd", "qty": 10, "avgPrice": 1490.0, "firstBuyDate": "2025-11-20" }
+      ]
+    },
+    {
+      "id": "acc-mf", "type": "MUTUAL_FUNDS", "fip": "Demo RTA", "maskedId": "Folio ••5402", "asOf": "2026-10-09",
+      "schemes": [
+        { "schemeName": "Demo Flexi Cap Fund - Direct - Growth", "units": 310, "costValue": 31620, "firstPurchaseDate": "2025-04-10" }
+      ]
+    },
+    {
+      "id": "acc-bank", "type": "DEPOSIT", "fip": "Demo Bank", "maskedId": "SB ••8841", "asOf": "2026-10-09",
+      "balance": 420000,
+      "summary": { "avgMonthlySalaryCredit": 62000, "monthlySipDebits": 8000, "monthlyEmiDebits": 0, "avgMonthlySpend": 29000 }
+    }
+  ],
+  "documents": [
+    {
+      "id": "doc-cas", "type": "CAS", "name": "Monthly depository statement (CAS)", "asOf": "2026-09-30",
+      "lines": [
+        { "account": "DP ••1180", "isin": "DM-ETF-N5001", "name": "DEMO NIFTY 50 ETF", "qty": 120 },
+        { "account": "DP ••1180", "isin": "DM-EQ-AUR01", "name": "AURORA INFOTECH LIMITED", "qty": 10 },
+        { "account": "Folio ••5402", "isin": "DM-MF-FLX01", "name": "Demo Flexi Cap Fund - Direct Plan - Growth", "qty": 310 }
+      ]
+    }
+  ]
+}

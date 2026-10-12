@@ -70,7 +70,11 @@ export interface Topic {
   id: string;
   title: string;
   tagline: string;
-  category: 'Fixed income' | 'Funds & trusts' | 'Risk' | 'Portfolio hygiene';
+  category: 'Basics' | 'Fixed income' | 'Funds & trusts' | 'Risk' | 'Portfolio hygiene';
+  /** a short, concrete worked example in plain language */
+  example: string;
+  /** related cards in Explore investments */
+  instruments?: string[];
   minutes: number;
   level: 'Beginner' | 'Intermediate';
   accent: string; // tailwind gradient classes
@@ -81,9 +85,11 @@ export interface Topic {
   resources: string[];
 }
 
-export const topics: Topic[] = [
+const ALL_TOPICS: Topic[] = [
   {
     id: 'bonds-basics', title: 'Bonds & debentures 101', tagline: 'How lending to a company or government pays you back.',
+    example: 'You buy a ₹1,000 bond with an 8% coupon. You receive ₹80 a year until maturity, then your ₹1,000 back — as long as the issuer keeps paying.',
+    instruments: ['bond', 'gsec'],
     category: 'Fixed income', minutes: 5, level: 'Beginner', accent: 'from-sky-500 to-indigo-600',
     sections: [
       { heading: 'What is a bond?', body: 'A bond is a loan you give to an issuer, such as a company, bank or government. In return the issuer promises regular interest (the coupon) and repays the face value on the maturity date. In India, bonds issued by companies are often called non-convertible debentures (NCDs).' },
@@ -106,6 +112,8 @@ export const topics: Topic[] = [
   },
   {
     id: 'gsecs', title: 'Government securities (G-Secs)', tagline: 'Lending to the Government of India — T-Bills, dated securities and SDLs.',
+    example: 'A 364-day T-Bill with ₹100 face value might be bought for about ₹93. You get ₹100 at maturity; the ₹7 difference is your return. (Illustrative numbers.)',
+    instruments: ['gsec', 'bond'],
     category: 'Fixed income', minutes: 4, level: 'Beginner', accent: 'from-emerald-500 to-teal-600',
     sections: [
       { heading: 'What they are', body: 'Government securities are debt instruments issued by the central or state governments. The Reserve Bank of India manages their issue through auctions.', bullets: [
@@ -126,6 +134,8 @@ export const topics: Topic[] = [
   },
   {
     id: 'coupon-vs-yield', title: 'Coupon rate vs yield', tagline: 'Why the “interest rate” on a bond isn’t your return.',
+    example: 'A 7.95% bond with ₹1,000 face value pays ₹79.50 a year. Bought at ₹968, its current yield is 79.50 ÷ 968 ≈ 8.21%, and its yield to maturity is higher still because you also gain ₹32 at maturity.',
+    instruments: ['bond', 'gsec'],
     category: 'Fixed income', minutes: 6, level: 'Intermediate', accent: 'from-violet-500 to-fuchsia-600',
     sections: [
       { heading: 'Three different numbers', body: 'Investors often mix up three figures:', bullets: [
@@ -147,6 +157,8 @@ export const topics: Topic[] = [
   },
   {
     id: 'etfs', title: 'Exchange-traded funds (ETFs)', tagline: 'Index funds you buy and sell like a share.',
+    example: 'An index ETF unit trades at ₹268 while its indicative NAV is ₹267.80 — a tiny premium. In a thinly traded ETF the gap can be much larger, so you may pay more than the units are worth.',
+    instruments: ['equity-fund', 'gold'],
     category: 'Funds & trusts', minutes: 4, level: 'Beginner', accent: 'from-amber-500 to-orange-600',
     sections: [
       { heading: 'How ETFs work', body: 'An ETF is a fund that usually tracks an index (e.g. a large-cap equity index), a commodity such as gold, or a basket of bonds. Its units are listed on a stock exchange, so you buy and sell them during market hours through a broker and hold them in a demat account.' },
@@ -167,6 +179,8 @@ export const topics: Topic[] = [
   },
   {
     id: 'mutual-funds', title: 'Mutual funds', tagline: 'NAV, direct vs regular plans, units and the riskometer.',
+    example: '₹10,000 invested at a NAV of ₹50 buys 200 units. If the NAV rises to ₹55, your 200 units are worth ₹11,000.',
+    instruments: ['equity-fund', 'debt-fund'],
     category: 'Funds & trusts', minutes: 5, level: 'Beginner', accent: 'from-rose-500 to-pink-600',
     sections: [
       { heading: 'Pooling money', body: 'A mutual fund pools money from many investors and invests it according to a stated objective. You own units. Each unit’s value, the net asset value (NAV), is published at the end of every business day.' },
@@ -188,6 +202,8 @@ export const topics: Topic[] = [
   },
   {
     id: 'reits', title: 'REITs', tagline: 'Owning a slice of income-producing real estate.',
+    example: 'A REIT unit bought at ₹340 pays distributions from office rents. Part of a payout may be interest, part dividend and part repayment of capital — each taxed differently.',
+    instruments: ['reit', 'invit'],
     category: 'Funds & trusts', minutes: 4, level: 'Intermediate', accent: 'from-cyan-500 to-blue-600',
     sections: [
       { heading: 'What is a REIT?', body: 'A Real Estate Investment Trust owns and manages income-producing property, mostly office parks, malls and warehouses. It passes most of the rental cash flow on to unitholders. REITs in India are regulated by SEBI and their units trade on stock exchanges.' },
@@ -208,6 +224,8 @@ export const topics: Topic[] = [
   },
   {
     id: 'invits', title: 'InvITs', tagline: 'Infrastructure cash flows — roads, power lines, pipelines.',
+    example: 'A toll-road InvIT may pay high distributions, but if the road returns to the government in 15 years, part of each payout is effectively your own money coming back.',
+    instruments: ['invit', 'reit'],
     category: 'Funds & trusts', minutes: 4, level: 'Intermediate', accent: 'from-lime-500 to-green-600',
     sections: [
       { heading: 'What is an InvIT?', body: 'An Infrastructure Investment Trust owns infrastructure assets such as toll roads, power transmission lines or pipelines, and distributes the cash they generate. Like REITs, InvITs are regulated by SEBI, and publicly offered InvITs are listed.' },
@@ -224,6 +242,8 @@ export const topics: Topic[] = [
   },
   {
     id: 'investment-risk', title: 'Understanding investment risk', tagline: 'Market, interest-rate, credit, liquidity — and how they stack up.',
+    example: 'A 10-year G-Sec and a company bond can both fall in price when interest rates rise (interest-rate risk), but only the company bond can also fail to pay you (credit risk).',
+    instruments: ['gsec', 'bond', 'equity-fund'],
     category: 'Risk', minutes: 6, level: 'Beginner', accent: 'from-slate-600 to-slate-900',
     sections: [
       { heading: 'Risk is more than volatility', body: 'Different investments expose you to different kinds of risk:', bullets: [
@@ -248,6 +268,8 @@ export const topics: Topic[] = [
   },
   {
     id: 'corporate-actions', title: 'Corporate actions: splits & bonuses', tagline: 'Why your share count can double overnight — and your wealth doesn’t.',
+    example: 'You own 80 shares at ₹2,480 (₹1,98,400). After a 1:2 split you own 160 shares at ₹1,240 — still ₹1,98,400.',
+    instruments: ['stock'],
     category: 'Portfolio hygiene', minutes: 4, level: 'Beginner', accent: 'from-orange-500 to-red-600',
     sections: [
       { heading: 'Common corporate actions', body: 'Companies take actions that change your holdings:', bullets: [
@@ -269,6 +291,8 @@ export const topics: Topic[] = [
   },
   {
     id: 'statements-reconciliation', title: 'Statements, CAS & reconciliation', tagline: 'One investor, many statements — how to make them agree.',
+    example: 'Your broker shows 150 shares but last month’s CAS shows 120. You bought 30 after the CAS date, so both are right — they are from different days.',
+    instruments: ['stock', 'equity-fund'],
     category: 'Portfolio hygiene', minutes: 5, level: 'Beginner', accent: 'from-emerald-600 to-cyan-700',
     sections: [
       { heading: 'Where your holdings are recorded', body: 'Shares, ETFs, bonds and REIT/InvIT units sit in your demat account at a depository (NSDL or CDSL) through a depository participant, usually your broker. Mutual-fund units are recorded by registrars (RTAs).' },
@@ -292,6 +316,8 @@ export const topics: Topic[] = [
   },
   {
     id: 'cost-basis', title: 'Cost basis & returns', tagline: 'Without purchase cost, “profit” is just a guess.',
+    example: 'You received 60 shares as a gift. Without the original purchase price, an app may show the whole ₹1.33 lakh as “profit” — which is wrong.',
+    instruments: ['stock'],
     category: 'Portfolio hygiene', minutes: 4, level: 'Intermediate', accent: 'from-yellow-500 to-amber-600',
     sections: [
       { heading: 'What cost basis is', body: 'Cost basis is what you paid for an investment, including charges. You need it to calculate gains, returns and capital-gains tax.' },
@@ -306,6 +332,83 @@ export const topics: Topic[] = [
     ],
     resources: ['incomeTax', 'sebiInvestor'],
   },
+  {
+    id: 'investing-basics', title: 'Investing basics: shares, funds & compounding', tagline: 'Why investing differs from saving — and how time does the heavy lifting.',
+    example: 'Investing ₹10,000 a month for 20 years at an assumed 10% a year could grow to roughly ₹76 lakh — of which you put in ₹24 lakh. (An illustration; returns are not guaranteed and can be lower.)',
+    instruments: ['stock', 'equity-fund', 'fd'],
+    category: 'Basics', minutes: 4, level: 'Beginner', accent: 'from-emerald-500 to-sky-600',
+    sections: [
+      { heading: 'Saving vs investing', body: 'Saving keeps money safe and easy to reach. Investing puts money to work for growth or income, and accepts that its value can go up and down along the way.' },
+      { heading: 'Shares and mutual funds', body: 'A share is a small part of one company. A mutual fund pools money from many investors and spreads it across many shares or bonds, so one company’s problems hurt less.', bullets: ['Shares: more control, more research, more concentration risk.', 'Funds: built-in diversification, run by a professional or tracking an index.'] },
+      { heading: 'Compounding', body: 'Compounding means your returns start earning returns of their own. The longer money stays invested, the bigger this effect becomes — which is why starting early matters more than starting big.' },
+      { heading: 'Inflation', body: 'Prices rise over time. If your money grows more slowly than prices, it buys less in future even though the number in your account went up.' },
+    ],
+    takeaways: ['Investing trades certainty for growth potential.', 'Funds spread risk across many holdings.', 'Time and regular investing let compounding work.'],
+    quiz: [
+      { q: 'Compounding means…', options: ['Paying tax every year', 'Returns earning further returns over time', 'Buying many shares at once', 'A guaranteed interest rate'], answer: 1, why: 'Growth builds on earlier growth, so time in the market matters a lot.' },
+      { q: 'A mutual fund mainly helps a new investor by…', options: ['Guaranteeing returns', 'Spreading money across many holdings', 'Avoiding all tax', 'Removing all risk'], answer: 1, why: 'Diversification reduces the damage any one company can do — it does not remove market risk.' },
+      { q: 'Your FD earns 6% before tax and inflation is 6%. After tax, your real return is…', options: ['About 6%', 'About 3%', 'Slightly below zero', 'Exactly zero'], answer: 2, why: 'Tax on the interest leaves you below 6%, so you fall behind inflation.' },
+    ],
+    resources: ['sebiInvestor', 'amfi', 'nism'],
+  },
+  {
+    id: 'emergency-liquidity', title: 'Emergency fund & liquidity', tagline: 'The safety net that comes before any investing.',
+    example: 'Monthly expenses of ₹40,000 × 6 months = ₹2.4 lakh kept in a savings account and short FDs before investing for growth.',
+    instruments: ['fd', 'debt-fund', 'ppf'],
+    category: 'Basics', minutes: 4, level: 'Beginner', accent: 'from-sky-500 to-cyan-600',
+    sections: [
+      { heading: 'Why it comes first', body: 'Job loss, a hospital stay or an urgent repair can happen any time. Without a buffer, you may have to sell investments when prices are low or borrow at high interest.' },
+      { heading: 'How much', body: 'Many people keep 3–12 months of expenses depending on their stage, dependents and how steady their income is. This app suggests an amount from your answers.' },
+      { heading: 'Where to keep it', body: 'Somewhere safe and quick to reach, such as a savings account, short fixed deposits or a liquid fund. Not in shares, and not in anything locked in.' },
+      { heading: 'Liquidity explained', body: 'Liquidity is how quickly you can turn an investment into cash at a fair price.', bullets: ['High: savings accounts, liquid funds.', 'Medium: FDs (penalty to break), large-company shares (price may be low that day).', 'Low: PPF, NPS, rarely traded bonds and some trusts.'] },
+    ],
+    takeaways: ['Build the buffer before investing for growth.', 'Keep it safe and easy to reach.', 'Locked-in products are not emergency money.'],
+    quiz: [
+      { q: 'An emergency fund is best kept in…', options: ['A single company’s shares', 'Something safe and quick to access', 'A 15-year locked scheme', 'Crypto'], answer: 1, why: 'It must be there, at full value, on the day you need it.' },
+      { q: 'Which of these is least liquid?', options: ['Savings account', 'Liquid fund', 'PPF', 'Large-company shares'], answer: 2, why: 'PPF has a long lock-in with limited withdrawals.' },
+      { q: 'Why build an emergency fund before investing?', options: ['To avoid selling investments at a bad time', 'Because it earns the most', 'It is required by law', 'To pay less tax'], answer: 0, why: 'A buffer protects your long-term investments from short-term shocks.' },
+    ],
+    resources: ['sebiInvestor', 'rbi'],
+  },
+  {
+    id: 'tax-basics', title: 'Tax basics for investors', tagline: 'Slab rate vs special rates — in plain words.',
+    example: 'You sell equity fund units held for 2 years with a ₹1.5 lakh gain. Under this app’s tax table, ₹1.25 lakh is exempt and 12.5% applies to ₹25,000 — about ₹3,125 plus cess. (Estimate only.)',
+    instruments: ['fd', 'equity-fund', 'debt-fund', 'gold'],
+    category: 'Basics', minutes: 5, level: 'Beginner', accent: 'from-amber-500 to-orange-600',
+    sections: [
+      { heading: 'Two kinds of tax treatment', body: 'Some investment income is simply added to your salary and taxed at your slab rate. Some gains have their own special rates.', bullets: ['Slab rate: interest from FDs, bonds and G-Secs; gains on debt funds bought on or after 1 April 2023.', 'Special rates: gains on shares and equity funds — 20% if sold within 12 months; 12.5% on long-term gains above ₹1.25 lakh a year.'] },
+      { heading: 'Useful details', body: 'The ₹1.25 lakh long-term exemption is shared across all your equity holdings each year. In the new regime, a rebate can make tax nil up to ₹12 lakh of taxable income, but it does not apply to special-rate gains.' },
+      { heading: 'What this app does — and doesn’t', body: 'The rates above are taken as stated in our design document and have not been independently or legally verified. Some items (gold, PPF, NPS, REIT/InvIT payouts) are marked “to verify”, and the app does not estimate tax for them. Always confirm with a qualified professional.' },
+    ],
+    takeaways: ['Interest is usually taxed at your slab rate every year.', 'Equity gains have special rates and a shared yearly exemption.', 'Estimates are not your actual tax bill.'],
+    quiz: [
+      { q: 'FD interest is generally taxed…', options: ['Only when the FD matures', 'At your slab rate each year', 'At 12.5%', 'Never'], answer: 1, why: 'Interest is added to your income every year, even if you don’t withdraw it.' },
+      { q: 'The ₹1.25 lakh yearly exemption on long-term equity gains is…', options: ['Per holding', 'Shared across all your equity holdings', 'Only for mutual funds', 'Only for the old regime'], answer: 1, why: 'It is one yearly allowance across everything you sell.' },
+      { q: 'If this app marks a tax rule “to verify”, it…', options: ['Guesses a rate anyway', 'Shows no estimate and asks you to confirm officially', 'Uses 30%', 'Hides the holding'], answer: 1, why: 'Unverified rules are never applied silently.' },
+    ],
+    resources: ['incomeTax', 'sebiInvestor'],
+  },
+  {
+    id: 'mistakes', title: 'Common mistakes: do’s & don’ts', tagline: 'Simple habits that protect new investors.',
+    example: 'Someone who stopped a SIP during a market fall and restarted a year later may have missed buying units at lower prices — staying invested would have kept the plan on track.',
+    instruments: ['equity-fund', 'stock', 'fd'],
+    category: 'Basics', minutes: 4, level: 'Beginner', accent: 'from-rose-500 to-orange-500',
+    sections: [
+      { heading: 'Do', body: 'Habits that usually help:', bullets: ['Build an emergency fund first.', 'Match each investment to when you need the money.', 'Spread money across asset types and companies.', 'Invest regularly (for example, a monthly SIP).', 'Check costs: expense ratios, exit loads, brokerage.', 'Keep records: contract notes and your CAS.'] },
+      { heading: 'Don’t', body: 'Common traps:', bullets: ['Chase tips or “guaranteed” high returns — these are red flags.', 'Put most of your money in one stock or sector.', 'Panic-sell long-term investments in a market fall.', 'Invest money you need soon in volatile assets.', 'Ignore tax and costs when comparing options.', 'Share OTPs, passwords or PINs with anyone.'] },
+      { heading: 'If something goes wrong', body: 'Raise it with your broker or platform first. If it isn’t resolved, SEBI’s SCORES system and SMART ODR are the official escalation routes.' },
+    ],
+    takeaways: ['Guaranteed high returns are a warning sign.', 'Diversify and match investments to your timeline.', 'Keep records and never share OTPs.'],
+    quiz: [
+      { q: 'Someone promises “guaranteed 3% a month”. This is…', options: ['A great deal', 'A red flag', 'Normal for FDs', 'Tax-free income'], answer: 1, why: 'No legitimate market investment guarantees returns like that.' },
+      { q: 'Markets fall 20% and your goal is 15 years away. A sensible first step is…', options: ['Sell everything', 'Avoid panic-selling and review your plan', 'Borrow to buy more', 'Stop all saving'], answer: 1, why: 'Long-term plans are built to ride out falls; review rather than react.' },
+      { q: 'Which records help you check your holdings and costs?', options: ['Social media posts', 'Contract notes and your CAS', 'Price alerts', 'News headlines'], answer: 1, why: 'They record what you bought, when, and at what price.' },
+    ],
+    resources: ['scores', 'sebiInvestor', 'nism'],
+  },
 ];
+
+// basics first, so new investors start with the foundations
+export const topics: Topic[] = [...ALL_TOPICS.filter((t) => t.category === 'Basics'), ...ALL_TOPICS.filter((t) => t.category !== 'Basics')];
 
 export const topicById = Object.fromEntries(topics.map((t) => [t.id, t])) as Record<string, Topic>;

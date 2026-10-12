@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { integrityScore, runXRay } from './xray';
+import { integrityScore } from './xray';
+import { normalise } from './normalise';
+import { personaById, type RawDemat } from './aa';
 import { priceFromYield, yieldToMaturity } from '../lib/bond';
-import { records } from '../data/portfolio';
 
-describe('Portfolio X-Ray rules engine', () => {
-  const result = runXRay();
+const family = personaById('family-stage');
+const run = (accounts = family.accounts) => normalise(accounts, family.documents).xray;
+
+describe('Portfolio X-Ray rules engine (family persona via the pipeline)', () => {
+  const result = run();
   const byCat = (c: string) => result.findings.filter((f) => f.category === c);
 
   it('is deterministic', () => {
-    expect(JSON.stringify(runXRay())).toEqual(JSON.stringify(result));
+    expect(JSON.stringify(run())).toEqual(JSON.stringify(result));
   });
 
   it('detects the expected set of findings', () => {
@@ -25,7 +29,7 @@ describe('Portfolio X-Ray rules engine', () => {
     expect(dup.impact.valueAtStake).toBeCloseTo(200 * 1642.25);
   });
 
-  it('applies the Sterling Motors split and adjusts cost', () => {
+  it('applies the Sterling Motors split (resolved from ticker) and adjusts cost', () => {
     const pos = result.positions.find((p) => p.instrument.id === 'DM-EQ-STM01')!;
     expect(pos.quantity).toBe(160);
     expect(pos.costPerUnit).toBe(1050);
@@ -38,15 +42,16 @@ describe('Portfolio X-Ray rules engine', () => {
   });
 
   it('flags an unexplained conflict as High when no trade explains it', () => {
-    const mutated = records.map((r) => (r.id === 'r8' ? { ...r, quantity: 350 } : r));
-    const f = runXRay(mutated).findings.find((x) => x.instrumentId === 'DM-EQ-DEC01')!;
+    const accounts = family.accounts.map((a) =>
+      a.id === 'acc-brk-b' ? { ...(a as RawDemat), holdings: (a as RawDemat).holdings.map((h) => (h.symbol === 'DECCANPWR' ? { ...h, qty: 350 } : h)) } : a,
+    );
+    const f = run(accounts).findings.find((x) => x.instrumentId === 'DM-EQ-DEC01')!;
     expect(f.category).toBe('quantity-conflict');
     expect(f.severity).toBe('High');
   });
 
   it('naive total exceeds reconciled total by duplicate minus split understatement', () => {
-    const diff = result.totals.naive - result.totals.reconciled;
-    expect(diff).toBeCloseTo(200 * 1642.25 - 80 * 1240);
+    expect(result.totals.naive - result.totals.reconciled).toBeCloseTo(200 * 1642.25 - 80 * 1240);
   });
 
   it('computes a transparent integrity score', () => {

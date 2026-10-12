@@ -1,0 +1,68 @@
+{
+  "id": "pre-retiree",
+  "displayName": "Suresh (sample)",
+  "tagline": "57 · pre-retirement · retiring at 60",
+  "answers": {
+    "lifeStage": "pre-retirement",
+    "age": 57,
+    "dependents": 1,
+    "goals": ["retirement-income", "health"],
+    "horizon": "<3",
+    "incomeNeed": "yes",
+    "experience": "5+",
+    "incomeType": "salaried",
+    "grossAnnual": 3000000,
+    "monthlyIncome": 190000,
+    "monthlyExpenses": 88000,
+    "monthlyEmi": 0,
+    "emergencyMonths": 9,
+    "insurance": ["health", "term"],
+    "fall20": "sell-some",
+    "pickPortfolio": "A",
+    "pastBehaviour": "sold"
+  },
+  "accounts": [
+    {
+      "id": "acc-brk-a", "type": "DEMAT", "fip": "Demo Broker A", "maskedId": "DP ••7702", "asOf": "2026-10-09",
+      "holdings": [
+        { "isin": "DM-EQ-MER01", "name": "Meridian Bank Ltd", "qty": 600, "avgPrice": 1210.0, "firstBuyDate": "2016-04-11" },
+        { "isin": "DM-EQ-AUR01", "name": "Aurora Infotech Ltd", "qty": 400, "avgPrice": 1105.0, "firstBuyDate": "2019-09-03" },
+        { "isin": "DM-EQ-STM01", "name": "Sterling Motors Ltd", "qty": 300, "avgPrice": 490.0, "firstBuyDate": "2018-02-12" },
+        { "isin": "DM-EQ-DEC01", "name": "Deccan Power Ltd", "qty": 1200, "avgPrice": null, "firstBuyDate": null, "remark": "Transferred in from another broker in 2022" },
+        { "isin": "DM-ETF-N5001", "name": "Demo Nifty-50 Index ETF", "qty": 2000, "avgPrice": 190.5, "firstBuyDate": "2020-05-18" },
+        { "isin": "DM-GS-2034", "name": "7.10% GS 2034 (Demo)", "qty": 1000, "avgPrice": 98.9, "firstBuyDate": "2024-07-01" }
+      ]
+    },
+    {
+      "id": "acc-mf", "type": "MUTUAL_FUNDS", "fip": "Demo RTA", "maskedId": "Folio ••6120", "asOf": "2026-10-09",
+      "schemes": [
+        { "schemeName": "Demo Flexi Cap Fund - Direct - Growth", "units": 8000.004, "costValue": 568000, "firstPurchaseDate": "2019-01-15" },
+        { "schemeName": "Demo Short Duration Fund - Direct - Growth", "units": 5000, "costValue": 205000, "firstPurchaseDate": "2023-09-01" }
+      ]
+    },
+    {
+      "id": "acc-bank", "type": "DEPOSIT", "fip": "Demo Bank", "maskedId": "SB ••4410", "asOf": "2026-10-09",
+      "balance": 500000,
+      "summary": { "avgMonthlySalaryCredit": 190000, "monthlySipDebits": 15000, "monthlyEmiDebits": 0, "avgMonthlySpend": 88000 }
+    },
+    {
+      "id": "acc-fd", "type": "TERM_DEPOSIT", "fip": "Demo Bank", "maskedId": "FD ••3390", "asOf": "2026-10-09",
+      "principal": 600000, "ratePct": 7.25, "startDate": "2026-01-10", "maturityDate": "2028-01-10"
+    }
+  ],
+  "documents": [
+    {
+      "id": "doc-cas", "type": "CAS", "name": "Monthly depository statement (CAS)", "asOf": "2026-09-30",
+      "lines": [
+        { "account": "DP ••7702", "isin": "DM-EQ-MER01", "name": "MERIDIAN BANK LIMITED", "qty": 600 },
+        { "account": "DP ••7702", "isin": "DM-EQ-AUR01", "name": "AURORA INFOTECH LIMITED", "qty": 400 },
+        { "account": "DP ••7702", "isin": "DM-EQ-STM01", "name": "STERLING MOTORS LIMITED", "qty": 300 },
+        { "account": "DP ••7702", "isin": "DM-EQ-DEC01", "name": "DECCAN POWER LIMITED", "qty": 1200 },
+        { "account": "DP ••7702", "isin": "DM-ETF-N5001", "name": "DEMO NIFTY 50 ETF", "qty": 2000 },
+        { "account": "DP ••7702", "isin": "DM-GS-2034", "name": "GOI 7.10% 2034 (DEMO)", "qty": 1000 },
+        { "account": "Folio ••6120", "isin": "DM-MF-FLX01", "name": "Demo Flexi Cap Fund - Direct Plan - Growth", "qty": 8000.0 },
+        { "account": "Folio ••6120", "isin": "DM-MF-SDF01", "name": "Demo Short Duration Fund - Direct Plan - Growth", "qty": 5000 }
+      ]
+    }
+  ]
+}

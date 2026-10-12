@@ -22,6 +22,24 @@ export function fmtCompactINR(v: number): string {
   return `${sign}₹${a.toFixed(0)}`;
 }
 
+/** Amount in words as typed (A4): 250000 → "2.5 lakh", 12000000 → "1.2 crore", 45000 → "45 thousand". */
+export function amountInWords(v: number): string {
+  const a = Math.abs(v);
+  const trim = (n: number) => String(+n.toFixed(2));
+  if (a >= 1e7) return `${trim(a / 1e7)} crore`;
+  if (a >= 1e5) return `${trim(a / 1e5)} lakh`;
+  if (a >= 1e3) return `${trim(a / 1e3)} thousand`;
+  return trim(a);
+}
+
+/** ₹ amount with lakh/crore wording for large values: ₹1.42 lakh, ₹2.3 crore, ₹45,000. */
+export function fmtLakh(v: number): string {
+  const a = Math.abs(v);
+  const sign = v < 0 ? '−' : '';
+  if (a >= 1e5) return `${sign}₹${amountInWords(a)}`;
+  return `${sign}${inr0.format(Math.round(a))}`;
+}
+
 export function fmtDate(iso: string): string {
   const d = new Date(iso + 'T00:00:00');
   return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });

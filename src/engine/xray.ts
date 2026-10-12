@@ -6,10 +6,9 @@
  * carries the evidence and reasoning steps that produced it.
  */
 import {
-  AS_OF, PRICE_SOURCE, corporateActions, instrumentById, priceById, records as allRecords,
-  sourceById, trades as allTrades,
-  type CorporateAction, type Instrument, type SourceRecord, type Trade,
-} from '../data/portfolio';
+  AS_OF, PRICE_SOURCE, corporateActions, instrumentById, priceById,
+  type CorporateAction, type DataSource, type Instrument, type PriceQuote, type SourceRecord, type Trade,
+} from '../data/securities';
 import { daysBetween, fmtDate, fmtINR, fmtINR2, fmtNum } from '../lib/format';
 import { yearsBetween, yieldToMaturity } from '../lib/bond';
 
@@ -67,6 +66,8 @@ export interface Finding {
   impact: { valueAtStake: number; label: string };
   scenarios: Scenario[];
   learnTopicId: string;
+  /** plain-language reason the potential discrepancy could matter to the investor */
+  whyItMatters: string;
 }
 
 export interface Position {
@@ -75,6 +76,7 @@ export interface Position {
   accountId: string;
   quantity: number;            // reconciled estimate
   reportedQuantity: number;    // as reported by the primary source
+  purchaseDate: string | null;
   primary: SourceRecord;
   duplicates: SourceRecord[];
   reference?: SourceRecord;    // CAS line
@@ -111,24 +113,45 @@ export const RULES = [
   { id: 'R7', name: 'Fractional-unit tolerance', category: 'rounding', description: 'Mutual-fund unit difference within 0.01 units — treated as rounding, not an error.' },
 ] as const;
 
+/** Why each kind of potential discrepancy can matter — shown on every finding. */
+export const WHY_IT_MATTERS: Record<Category, string> = {
+  duplicate: 'If the same holding is counted twice, your total value and asset mix look different from reality, which can make your portfolio seem riskier or larger than it is.',
+  'corporate-action': 'If a split or bonus isn’t applied, the holding looks smaller and its cost per share is wrong — which distorts your gains, tax estimates and asset mix.',
+  'quantity-conflict': 'If one statement is out of date or wrong, decisions based on it — selling, rebalancing or estimating tax — could be off.',
+  'missing-cost': 'Without the purchase price, gains and capital-gains tax can’t be estimated. Some apps treat a missing cost as zero, which makes profits look bigger than they are.',
+  'stale-price': 'An old price may not be what you would get if you sold today, especially for bonds that rarely trade.',
+  'yield-label': 'The coupon is not your return. Comparing bonds by coupon instead of yield to maturity can make a bond look better or worse than it really is.',
+  rounding: 'Usually nothing — tiny unit differences between statements are normal. It is shown so you know they are expected.',
+};
+
 export const STALE_DAYS = 7;
 export const MF_UNIT_TOLERANCE = 0.01;
 /** price-uncertainty band for stale quotes: 0.1% per stale day, capped at 5% */
 export const staleBand = (days: number) => Math.min(0.05, 0.001 * days);
 
 const approxEq = (a: number, b: number, tol = 1e-6) => Math.abs(a - b) <= tol;
-const srcName = (id: string) => sourceById[id]?.shortName ?? id;
+export interface XRayInput {
+  sources: DataSource[];
+  records: SourceRecord[];
+  trades: Trade[];
+  actions?: CorporateAction[];
+  /** price lookup; callers must only pass records whose instrument has a quote */
+  priceOf?: (id: string) => PriceQuote | undefined;
+  asOf?: string;
+}
 
-export function runXRay(
-  records: SourceRecord[] = allRecords,
-  actions: CorporateAction[] = corporateActions,
-  trades: Trade[] = allTrades,
-  asOf: string = AS_OF,
-): XRayResult {
+export function runXRay(input: XRayInput): XRayResult {
+  const { records, trades } = input;
+  const actions = input.actions ?? corporateActions;
+  const asOf = input.asOf ?? AS_OF;
+  const sourceById = Object.fromEntries(input.sources.map((s) => [s.id, s])) as Record<string, DataSource>;
+  const srcName = (id: string) => sourceById[id]?.shortName ?? id;
+  const priceOf = input.priceOf ?? ((id: string) => priceById[id]);
   const findings: Finding[] = [];
   const positions: Position[] = [];
   let fid = 0;
   const nextId = () => `XR-${String(++fid).padStart(3, '0')}`;
+  const addFinding = (f: Omit<Finding, 'whyItMatters'>) => findings.push({ ...f, whyItMatters: WHY_IT_MATTERS[f.category] });
 
   const holding = records.filter((r) => sourceById[r.sourceId]?.role === 'holding');
   const reference = records.filter((r) => sourceById[r.sourceId]?.role === 'reference');
@@ -149,7 +172,7 @@ export function runXRay(
     const primary = sorted[0];
     const duplicates = sorted.slice(1);
     const inst = instrumentById[primary.instrumentId];
-    const pq = priceById[inst.id];
+    const pq = priceOf(inst.id)!;
     const ref = reference.find((r) => r.instrumentId === primary.instrumentId && r.accountId === primary.accountId);
     const primarySrc = sourceById[primary.sourceId];
     const refSrc = ref ? sourceById[ref.sourceId] : undefined;
@@ -166,11 +189,11 @@ export function runXRay(
       const over = dupQty * price;
       const id = nextId();
       findingIds.push(id);
-      findings.push({
+      addFinding({
         id, ruleId: 'R1', ruleName: 'Duplicate-position check', category: 'duplicate',
         severity: 'High', confidence: 'High',
         confidenceNote: 'Same demo identifier, same demat account and identical quantity in both sources. Name differences are cosmetic.',
-        title: `${inst.name} appears twice for the same demat account`,
+        title: `${inst.name} may be counted twice for the same demat account`,
         summary: `${srcName(primary.sourceId)} and ${duplicates.map((d) => srcName(d.sourceId)).join(', ')} both report ${fmtNum(primary.quantity)} ${inst.unit} in ${primary.accountId}. Adding them together would double-count ${fmtINR(over)}.`,
         instrumentId: inst.id, accountId: primary.accountId,
         evidence: [
@@ -223,11 +246,11 @@ export function runXRay(
         const under = (quantity - primary.quantity) * price;
         const id = nextId();
         findingIds.push(id);
-        findings.push({
+        addFinding({
           id, ruleId: 'R2', ruleName: 'Corporate-action adjustment check', category: 'corporate-action',
           severity: 'High', confidence: 'High',
           confidenceNote: `${fmtNum(primary.quantity)} × ${ca.factor} = ${fmtNum(ref.quantity)} exactly matches the depository balance after the ex-date. The post-split price is already in the price file.`,
-          title: `${inst.name}: ${ca.type} not reflected in ${srcName(primary.sourceId)}`,
+          title: `${inst.name}: ${ca.type} may not be reflected in ${srcName(primary.sourceId)}`,
           summary: `A 1:${ca.factor} ${ca.type} went ex on ${fmtDate(ca.exDate)}. ${srcName(primary.sourceId)} still shows ${fmtNum(primary.quantity)} shares, but the depository shows ${fmtNum(ref.quantity)}. If you value the old quantity at the new price, it understates the holding by ${fmtINR(under)}.`,
           instrumentId: inst.id, accountId: primary.accountId,
           evidence: [
@@ -266,7 +289,7 @@ export function runXRay(
           const id = nextId();
           findingIds.push(id);
           const d = Math.abs(diff) * price;
-          findings.push({
+          addFinding({
             id, ruleId: 'R7', ruleName: 'Fractional-unit tolerance', category: 'rounding',
             severity: 'Info', confidence: 'High',
             confidenceNote: `The difference of ${fmtNum(Math.abs(diff))} units is within the ${MF_UNIT_TOLERANCE}-unit tolerance.`,
@@ -306,7 +329,7 @@ export function runXRay(
           const atStake = Math.abs(diff) * price;
           const id = nextId();
           findingIds.push(id);
-          findings.push({
+          addFinding({
             id, ruleId: 'R3', ruleName: 'Quantity reconciliation', category: 'quantity-conflict',
             severity: explained ? 'Low' : 'High',
             confidence: explained ? 'High' : 'Medium',
@@ -315,7 +338,7 @@ export function runXRay(
               : 'No trade, corporate action or rounding rule explains the gap.',
             title: explained
               ? `${inst.name}: quantities differ — explained by a recent trade`
-              : `${inst.name}: unexplained quantity conflict`,
+              : `${inst.name}: quantities don’t match and no trade explains it yet`,
             summary: explained
               ? `${srcName(primary.sourceId)} shows ${fmtNum(primary.quantity)} shares and the ${fmtDate(refSrc!.asOf)} CAS shows ${fmtNum(ref.quantity)}. A purchase of ${fmtNum(net)} on ${fmtDate(after[0].date)} happened after the CAS date, so this is most likely a timing difference.`
               : `${srcName(primary.sourceId)} shows ${fmtNum(primary.quantity)} but the depository shows ${fmtNum(ref.quantity)}. No recorded trade explains the difference.`,
@@ -372,7 +395,7 @@ export function runXRay(
       const mv = quantity * price;
       const id = nextId();
       findingIds.push(id);
-      findings.push({
+      addFinding({
         id, ruleId: 'R4', ruleName: 'Cost-basis completeness', category: 'missing-cost',
         severity: 'Medium', confidence: 'High',
         confidenceNote: 'The field is empty in the only holdings source for this position, and the CAS has no cost data.',
@@ -412,7 +435,7 @@ export function runXRay(
       const band = staleBand(staleDays);
       const id = nextId();
       findingIds.push(id);
-      findings.push({
+      addFinding({
         id, ruleId: 'R5', ruleName: 'Price freshness', category: 'stale-price',
         severity: 'Medium', confidence: 'Medium',
         confidenceNote: 'The price is definitely old. How far the real value has moved since then is uncertain.',
@@ -422,7 +445,7 @@ export function runXRay(
         evidence: [
           { source: PRICE_SOURCE, field: 'Last traded price', value: fmtINR2(price), asOf: pq.priceDate, flag: true },
           { source: 'Portfolio valuation date', field: 'As of', value: fmtDate(asOf), asOf },
-          { source: primarySrc.name, sourceId: primary.sourceId, field: 'Quoted in statement', value: primary.raw.split('|').pop()!.trim(), asOf: primarySrc.asOf, raw: primary.raw },
+          { source: primarySrc.name, sourceId: primary.sourceId, field: 'Holding in statement', value: `${fmtNum(primary.quantity)} ${inst.unit} (statement shows no newer price)`, asOf: primarySrc.asOf, raw: primary.raw },
         ],
         reasoning: [
           `Price age = ${staleDays} calendar days (threshold: ${STALE_DAYS}).`,
@@ -459,11 +482,11 @@ export function runXRay(
         const id = nextId();
         findingIds.push(id);
         const cy = ((b.face * b.couponRate) / price) * 100;
-        findings.push({
+        addFinding({
           id, ruleId: 'R6', ruleName: 'Yield-label consistency', category: 'yield-label',
           severity: 'Medium', confidence: 'Medium',
           confidenceNote: `The reported “yield” equals the coupon exactly, while the price is ${((Math.abs(b.face - price) / b.face) * 100).toFixed(1)}% ${price < b.face ? 'below' : 'above'} face value. The platform probably meant coupon. Our yield to maturity uses simplified maths.`,
-          title: `${inst.name}: “yield” shown is really the coupon`,
+          title: `${inst.name}: “yield” shown looks like the coupon rate`,
           summary: `The bond platform shows a yield of ${primary.reportedYieldPct.toFixed(2)}%. That is exactly the coupon rate. At today’s price of ${fmtINR2(price)}, the approximate yield to maturity is ${ytm.toFixed(2)}% and the current yield is ${cy.toFixed(2)}%.`,
           instrumentId: inst.id, accountId: primary.accountId,
           evidence: [
@@ -499,14 +522,14 @@ export function runXRay(
     const costValue = costPerUnit != null ? costPerUnit * quantity : null;
     const value = quantity * price;
     positions.push({
-      key, instrument: inst, accountId: primary.accountId, quantity, reportedQuantity: primary.quantity,
+      key, instrument: inst, accountId: primary.accountId, quantity, reportedQuantity: primary.quantity, purchaseDate: primary.purchaseDate ?? null,
       primary, duplicates, reference: ref, price, priceDate: pq.priceDate, value,
       costPerUnit, costValue, unrealized: costValue != null ? value - costValue : null, findingIds,
     });
   }
 
   const reconciled = positions.reduce((s, p) => s + p.value, 0);
-  const naive = holding.reduce((s, r) => s + r.quantity * priceById[r.instrumentId].price, 0);
+  const naive = holding.reduce((s, r) => s + r.quantity * priceOf(r.instrumentId)!.price, 0);
   const withCost = positions.filter((p) => p.costValue != null);
   const cost = withCost.reduce((s, p) => s + p.costValue!, 0);
   const valueWithKnownCost = withCost.reduce((s, p) => s + p.value, 0);
