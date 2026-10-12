@@ -1,0 +1,106 @@
+1
+00:00:00,800 --> 00:00:04,401
+For a new investor, it’s hard to know
+where your money sits,
+
+2
+00:00:04,700 --> 00:00:07,536
+what risks you carry, and what to trust.
+
+3
+00:00:10,000 --> 00:00:13,704
+So we spoke with a chartered accountant
+about what new investors need.
+
+4
+00:00:14,400 --> 00:00:16,889
+Their input shaped our requirements:
+
+5
+00:00:16,929 --> 00:00:21,985
+risk fit, a simple calculator,
+visible tax, and financial literacy.
+
+6
+00:00:25,500 --> 00:00:29,515
+Investor Assistant starts with the person,
+not the portfolio.
+
+7
+00:00:30,000 --> 00:00:31,990
+It asks about goals and finances,
+
+8
+00:00:32,030 --> 00:00:36,132
+then connects demo accounts
+through a simulated consent flow.
+
+9
+00:00:38,400 --> 00:00:42,674
+Then Portfolio X-Ray checks the data,
+and shows its work.
+
+10
+00:00:43,500 --> 00:00:48,429
+Each potential discrepancy comes with
+its evidence, and what to verify next.
+
+11
+00:00:50,300 --> 00:00:53,718
+A flag is a starting point,
+not proof of an error.
+
+12
+00:00:55,400 --> 00:00:58,854
+It weighs your ability to take risk
+against your willingness,
+
+13
+00:00:58,894 --> 00:01:00,561
+and the lower one wins.
+
+14
+00:01:00,900 --> 00:01:03,959
+Then it explains whether your mix broadly fits.
+
+15
+00:01:07,000 --> 00:01:09,222
+But spotting a problem isn’t enough.
+
+16
+00:01:09,262 --> 00:01:11,184
+Understanding it matters.
+
+17
+00:01:11,600 --> 00:01:15,494
+Learn & Explore turns bonds, funds, risk and tax
+
+18
+00:01:15,534 --> 00:01:18,916
+into short lessons and quick quizzes.
+
+19
+00:01:22,000 --> 00:01:24,645
+The calculator shows a range of outcomes,
+
+20
+00:01:24,685 --> 00:01:28,309
+with inflation, and estimated tax
+where supported.
+
+21
+00:01:30,700 --> 00:01:33,425
+Explore investments compares options like
+
+22
+00:01:33,465 --> 00:01:36,513
+REITs, InvITs and government securities.
+
+23
+00:01:37,600 --> 00:01:40,318
+Detect. Understand. Plan.
+
+24
+00:01:41,400 --> 00:01:46,212
+Investor Assistant helps new investors
+ask better questions about their money.

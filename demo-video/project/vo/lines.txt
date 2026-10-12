@@ -1,0 +1,17 @@
+L01|For a new investor, it's hard to know where your money sits,
+L02|what risks you carry, and what to trust.
+L03|So we spoke with a chartered accountant about what new investors need.
+L04|Their input shaped our requirements: risk fit, a simple calculator, visible tax, and financial literacy.
+L05|Investor Assistant starts with the person, not the portfolio.
+L06|It asks about goals and finances, then connects demo accounts through a simulated consent flow.
+L07|Then Portfolio X-Ray checks the data, and shows its work.
+L08|Each potential discrepancy comes with its evidence, and what to verify next.
+L09|A flag is a starting point, not proof of an error.
+L10|It weighs your ability to take risk against your willingness, and the lower one wins.
+L11|Then it explains whether your mix broadly fits.
+L12|But spotting a problem isn't enough. Understanding it matters.
+L13|Learn and Explore turns bonds, funds, risk and tax into short lessons and quick quizzes.
+L14|The calculator shows a range of outcomes, with inflation, and estimated tax where supported.
+L15|Explore investments compares options like REITs, InvITs and government securities.
+L16|Detect. Understand. Plan.
+L17|Investor Assistant helps new investors ask better questions about their money.
