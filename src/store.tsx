@@ -14,11 +14,12 @@ import type { AfterTaxInstrument, CalcMode } from './engine/calc';
 
 export type Stage = 'welcome' | 'intro' | 'connect' | 'later' | 'reveal' | 'app';
 export type ConnectStep = 'why' | 'consent' | 'choose' | 'verify' | 'check' | 'confirm' | 'declined' | 'manual';
-export type Tab = 'assistant' | 'grow' | 'money';
+export type Tab = 'assistant' | 'grow' | 'money' | 'learn';
 export type Sheet =
   | { type: 'finding'; id: string }
   | { type: 'topic'; id: string }
   | { type: 'lesson'; id: string }
+  | { type: 'compare'; id: 'reit-invit' | 'govt-bonds' }
   | { type: 'holding-tax'; id: string }
   | { type: 'settings' }
   | { type: 'how' }

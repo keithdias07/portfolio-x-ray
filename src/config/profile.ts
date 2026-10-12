@@ -42,6 +42,7 @@ export const SUITABILITY_CONFIG = {
   driftThreshold: 10,          // pp of equity drift before "too aggressive / too cautious"
   idleCashThreshold: 10,       // pp of cash above target (after the emergency buffer) before "idle cash"
   singleHoldingMax: 15,        // % of portfolio in one security
+  singleSectorMax: 25,         // % of portfolio in direct stocks of one sector
   singleAccountMax: 60,        // % of portfolio in one account
 };
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { EnglishOnly } from '../components/EnglishOnly';
 import {
-  ArrowRight, BookOpen, Check, CheckCircle2, Code2, ExternalLink, FileText, GitCompareArrows, HelpCircle, Lightbulb,
+  AlertTriangle, ArrowRight, BookOpen, Check, CheckCircle2, Code2, ExternalLink, FileText, GitCompareArrows, HelpCircle, Lightbulb,
   Printer, RotateCcw, ShieldAlert, ShieldCheck, Sparkles, Trash2, XCircle,
 } from 'lucide-react';
 import { useStore, type Sheet as SheetT } from '../store';
@@ -9,13 +9,14 @@ import { Sheet, Chip, PrimaryButton, TaxChip, AllocationBar } from '../component
 import { ConfidenceMeter, cx, Pill, SeverityBadge } from '../components/ui';
 import { CATEGORY_LABEL, RULES, SEVERITY_WEIGHT, type Finding } from '../engine/xray';
 import { topicById, topics, resources, type Topic } from '../data/learn';
-import { INSTRUMENT_LESSONS } from '../data/instruments';
+import { GOVT_VS_OTHER_BONDS, INSTRUMENT_LESSONS, REIT_VS_INVIT, lessonById } from '../data/instruments';
 import { ReconcileVisual, RiskLadder, SplitVisual, YieldExplorer } from '../components/widgets';
 import { LessonCard } from './AssistantTab';
 import { DemoControls } from './DemoPanel';
 import { DISCLAIMERS, RETURN_ASSUMPTIONS } from '../config/profile';
 import { TAX_META } from '../config/tax';
 import { SAVINGS_RATE } from '../engine/normalise';
+import { PASS_MARK, passedCount, recordBest, scoreQuiz } from '../lib/learning';
 import { fmtDate, fmtINR, fmtLakh } from '../lib/format';
 import { tr, type SKey } from '../i18n';
 import { CLASS_LABEL } from '../engine/suitability';
@@ -45,7 +46,8 @@ function SheetView({ sh, onClose }: { sh: SheetT; onClose: () => void }) {
   switch (sh.type) {
     case 'finding': return <FindingSheet id={sh.id} onClose={onClose} />;
     case 'topic': return <TopicSheet id={sh.id} onClose={onClose} />;
-    case 'lesson': return <Sheet title="Lesson" onClose={onClose}><LessonCard id={sh.id} /></Sheet>;
+    case 'lesson': return <Sheet title={lessonById[sh.id]?.name ?? 'Investment'} onClose={onClose}><EnglishOnly className="mb-3" /><LessonCard id={sh.id} full /></Sheet>;
+    case 'compare': return <CompareSheet id={sh.id} onClose={onClose} />;
     case 'holding-tax': return <HoldingTaxSheet id={sh.id} onClose={onClose} />;
     case 'settings': return <SettingsSheet onClose={onClose} />;
     case 'how': return <HowSheet onClose={onClose} />;
@@ -101,7 +103,10 @@ function FindingBody({ f }: { f: Finding }) {
   return (
     <div className="space-y-4">
       <div>
-        <div className="flex flex-wrap items-center gap-1.5"><SeverityBadge severity={f.severity} /><Pill>{CATEGORY_LABEL[f.category]}</Pill><Pill>Rule {f.ruleId}</Pill></div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className={cx('rounded-md px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wide', f.category === 'rounding' ? 'bg-slate-100 text-slate-600' : 'bg-amber-100 text-amber-900')}>{f.category === 'rounding' ? 'Informational' : 'Potential discrepancy'}</span>
+          <SeverityBadge severity={f.severity} /><Pill>{CATEGORY_LABEL[f.category]}</Pill><Pill>Rule {f.ruleId}</Pill>
+        </div>
         <h2 className="mt-2 text-[17px] font-bold leading-snug text-slate-900">{f.title}</h2>
         <p className="mt-1 text-[14px] leading-relaxed text-slate-600">{f.summary}</p>
         <p className="mt-1.5 text-[11.5px] text-slate-500">A possible data discrepancy flagged by a fixed rule — not proof of an error or wrongdoing. Confirm with your broker or depository.</p>
@@ -125,6 +130,10 @@ function FindingBody({ f }: { f: Finding }) {
           ))}
         </div>
       </section>
+      <section className="rounded-xl bg-sky-50 p-3 ring-1 ring-sky-100">
+        <h3 className="mb-1 flex items-center gap-1.5 text-[13px] font-semibold text-sky-900"><AlertTriangle className="h-4 w-4" /> Why it may matter</h3>
+        <p className="text-[13px] leading-relaxed text-sky-900">{f.whyItMatters}</p>
+      </section>
       <section>
         <h3 className="mb-1.5 flex items-center gap-1.5 text-[13px] font-semibold text-slate-900"><GitCompareArrows className="h-4 w-4 text-slate-500" /> How we reached this</h3>
         <ol className="space-y-1.5">
@@ -145,7 +154,7 @@ function FindingBody({ f }: { f: Finding }) {
         <p className="mt-1 text-[12px] text-slate-500"><b>Why this confidence:</b> {f.confidenceNote}</p>
       </section>
       <section>
-        <h3 className="mb-1 text-[13px] font-semibold text-slate-900">How to verify</h3>
+        <h3 className="mb-1 text-[13px] font-semibold text-slate-900">What you can verify next</h3>
         {f.nextSteps.map((x) => <p key={x} className="flex gap-2 text-[13px] text-slate-700"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />{x}</p>)}
       </section>
     </div>
@@ -174,6 +183,10 @@ function TopicSheet({ id, onClose }: { id: string; onClose: () => void }) {
           ))}
         </div>
       )}
+      <div className="mt-3 rounded-2xl bg-amber-50 p-3 ring-1 ring-amber-100">
+        <div className="text-[11.5px] font-bold uppercase tracking-wide text-amber-800">Example</div>
+        <p className="mt-0.5 text-[13.5px] leading-relaxed text-amber-950">{t.example}</p>
+      </div>
       <div className="mt-4 space-y-4">
         {t.sections.map((sec) => (
           <section key={sec.heading}>
@@ -195,6 +208,16 @@ function TopicSheet({ id, onClose }: { id: string; onClose: () => void }) {
         <div className="flex items-center gap-1.5 text-[13px] font-semibold text-slate-900"><Sparkles className="h-4 w-4 text-amber-500" /> Key takeaways</div>
         {t.takeaways.map((x) => <p key={x} className="mt-1 flex gap-2 text-[13px] text-slate-700"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />{x}</p>)}
       </div>
+      {t.instruments && t.instruments.length > 0 && (
+        <div className="mt-4">
+          <div className="text-[13px] font-semibold text-slate-900">Related investments</div>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {t.instruments.map((iid) => lessonById[iid] && (
+              <Chip key={iid} onClick={() => openSheet({ type: 'lesson', id: iid })}>{lessonById[iid].name.split(' (')[0]}</Chip>
+            ))}
+          </div>
+        </div>
+      )}
       <Quiz topic={t} />
       <div className="mt-4">
         <div className="flex items-center gap-1.5 text-[13px] font-semibold text-slate-900"><ShieldCheck className="h-4 w-4 text-emerald-600" /> Official resources</div>
@@ -219,10 +242,10 @@ function Quiz({ topic }: { topic: Topic }) {
   const { set } = useStore();
   const [answers, setAnswers] = useState<(number | null)[]>(topic.quiz.map(() => null));
   const [checked, setChecked] = useState(false);
-  const score = answers.filter((a, i) => a === topic.quiz[i].answer).length;
+  const score = scoreQuiz(topic.quiz, answers);
   const submit = () => {
     setChecked(true);
-    set((st) => ({ learn: { ...st.learn, quizBest: { ...st.learn.quizBest, [topic.id]: Math.max(score, st.learn.quizBest[topic.id] ?? 0) } } }));
+    set((st) => ({ learn: { ...st.learn, quizBest: recordBest(st.learn.quizBest, topic.id, score) } }));
   };
   return (
     <div className="mt-4 rounded-2xl border border-slate-200 p-4">
@@ -258,7 +281,7 @@ function Quiz({ topic }: { topic: Topic }) {
           <PrimaryButton disabled={answers.some((a) => a == null)} onClick={submit}>Check answers</PrimaryButton>
         ) : (
           <>
-            <span className={cx('rounded-lg px-3 py-2 text-[13px] font-semibold', score >= 2 ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-800')}>{score}/3 — {score === 3 ? 'Mastered!' : score >= 2 ? 'Passed' : 'Review and try again'}</span>
+            <span className={cx('rounded-lg px-3 py-2 text-[13px] font-semibold', score >= PASS_MARK ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-800')}>{score}/3 — {score === 3 ? 'Mastered!' : score >= PASS_MARK ? 'Passed' : 'Review and try again'}</span>
             <Chip onClick={() => { setAnswers(topic.quiz.map(() => null)); setChecked(false); }}><RotateCcw className="mr-1 inline h-3 w-3" />Try again</Chip>
           </>
         )}
@@ -340,6 +363,7 @@ function HowSheet({ onClose }: { onClose: () => void }) {
   return (
     <Sheet title="How this works" onClose={onClose}>
       <div className="space-y-4 text-[13.5px] leading-relaxed text-slate-700">
+        <p><b>Detect → Understand → Make more informed decisions.</b> Portfolio X-Ray flags potential discrepancies with their evidence; Learn & Explore explains the investments and ideas behind them. Requirements were informed by input from a chartered accountant during development — this is not an endorsement or certification.</p>
         <p><b>Numbers come from engines; words come from the assistant.</b> Every figure is produced by fixed, unit-tested rules running in your browser. The assistant is scripted — it only narrates engine outputs and a reviewed lesson library. No AI model is used.</p>
         <ol className="space-y-1.5">
           {[
@@ -399,7 +423,7 @@ function ShareSheet({ onClose }: { onClose: () => void }) {
 
 function LibrarySheet({ onClose }: { onClose: () => void }) {
   const { s, openSheet } = useStore();
-  const passed = topics.filter((t) => (s.learn.quizBest[t.id] ?? 0) >= 2).length;
+  const passed = passedCount(topics, s.learn.quizBest);
   return (
     <Sheet title="Lessons & quizzes" onClose={onClose}>
       <EnglishOnly className="mb-3" />
@@ -417,7 +441,7 @@ function LibrarySheet({ onClose }: { onClose: () => void }) {
                 <span className="block truncate text-[13.5px] font-semibold text-slate-900">{t.title}</span>
                 <span className="block text-[11.5px] text-slate-500">{t.category} · {t.minutes} min</span>
               </span>
-              {best != null && <span className={cx('text-[12px] font-semibold', best >= 2 ? 'text-emerald-700' : 'text-amber-700')}>{best}/3</span>}
+              {best != null && <span className={cx('text-[12px] font-semibold', best >= PASS_MARK ? 'text-emerald-700' : 'text-amber-700')}>{best}/3</span>}
             </button>
           );
         })}
@@ -425,6 +449,47 @@ function LibrarySheet({ onClose }: { onClose: () => void }) {
       <div className="mt-5 text-[12px] font-bold uppercase tracking-wide text-slate-500">Instrument cards</div>
       <div className="mt-2 space-y-2">{INSTRUMENT_LESSONS.map((l) => <LessonCard key={l.id} id={l.id} />)}</div>
       <p className="mt-3 text-[11.5px] text-slate-400">Classes: {Object.values(CLASS_LABEL).join(', ')}. Tax chips marked * are “to verify”.</p>
+    </Sheet>
+  );
+}
+
+function CompareSheet({ id, onClose }: { id: 'reit-invit' | 'govt-bonds'; onClose: () => void }) {
+  const { openSheet } = useStore();
+  if (id === 'reit-invit') {
+    return (
+      <Sheet title="REITs vs InvITs" onClose={onClose}>
+        <p className="text-[13px] text-slate-600">Both are SEBI-regulated trusts whose units trade on exchanges and pass most of their cash to unitholders. The difference is what they own.</p>
+        <div className="mt-3 overflow-hidden rounded-xl ring-1 ring-slate-200">
+          <div className="grid grid-cols-[88px_1fr_1fr] bg-slate-50 text-[11px] font-bold uppercase text-slate-500"><span className="p-2" /><span className="p-2">REIT</span><span className="p-2">InvIT</span></div>
+          {REIT_VS_INVIT.map((r) => (
+            <div key={r.aspect} className="grid grid-cols-[88px_1fr_1fr] border-t border-slate-100 text-[12px] leading-snug">
+              <span className="p-2 font-semibold text-slate-500">{r.aspect}</span><span className="p-2 text-slate-800">{r.reit}</span><span className="p-2 text-slate-800">{r.invit}</span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 flex gap-1.5"><Chip onClick={() => openSheet({ type: 'lesson', id: 'reit' })}>REIT card</Chip><Chip onClick={() => openSheet({ type: 'lesson', id: 'invit' })}>InvIT card</Chip><Chip onClick={() => openSheet({ type: 'topic', id: 'reits' })}>REIT lesson</Chip><Chip onClick={() => openSheet({ type: 'topic', id: 'invits' })}>InvIT lesson</Chip></div>
+        <p className="mt-3 text-[11px] text-slate-400">Educational only. Tax on REIT/InvIT payouts is marked “to verify”.</p>
+      </Sheet>
+    );
+  }
+  return (
+    <Sheet title="Government Securities vs other bonds" onClose={onClose}>
+      <p className="text-[13px] text-slate-600">Government Securities are loans to the central or state governments, so default risk is very low. Corporate bonds are loans to companies and carry credit risk. All of them can change in price when interest rates move.</p>
+      <div className="mt-3 space-y-2">
+        {GOVT_VS_OTHER_BONDS.map((b) => (
+          <div key={b.name} className="rounded-xl p-3 ring-1 ring-slate-200">
+            <div className="text-[13.5px] font-semibold text-slate-900">{b.name}</div>
+            <div className="mt-1 grid grid-cols-[64px_1fr] gap-x-2 gap-y-0.5 text-[12px] leading-snug">
+              <span className="font-semibold text-slate-400">Issuer</span><span className="text-slate-700">{b.issuer}</span>
+              <span className="font-semibold text-slate-400">Term</span><span className="text-slate-700">{b.term}</span>
+              <span className="font-semibold text-slate-400">Income</span><span className="text-slate-700">{b.income}</span>
+              <span className="font-semibold text-slate-400">Note</span><span className="text-slate-700">{b.note}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <a href="https://rbiretaildirect.org.in/" target="_blank" rel="noopener noreferrer" className="mt-3 block rounded-xl bg-emerald-600 px-3 py-2.5 text-center text-[13px] font-semibold text-white">See current Government Securities on RBI Retail Direct ↗</a>
+      <p className="mt-2 text-[11px] text-slate-400">This prototype has no live listings, prices or yields and does not buy anything. The demo bond “Demo 7.10% GS 2034” in the sample portfolio is illustrative only.</p>
     </Sheet>
   );
 }

@@ -8,6 +8,7 @@ import type { Analysis } from './pipeline';
 import type { CanonicalPortfolio } from './normalise';
 import { CLASS_LABEL } from './suitability';
 import { lessonById, INSTRUMENT_LESSONS } from '../data/instruments';
+import { topicById } from '../data/learn';
 import { RETURN_ASSUMPTIONS, type BroadKey } from '../config/profile';
 import { fmtLakh } from '../lib/format';
 import { RULES } from './xray';
@@ -25,7 +26,7 @@ export type AssistantAction =
   | { type: 'open-grow'; prefill: Analysis['advice']['calcPrefill'] }
   | { type: 'open-topic'; topicId: string }
   | { type: 'open-finding'; findingId: string }
-  | { type: 'open-tab'; tab: 'money' | 'grow' };
+  | { type: 'open-tab'; tab: 'money' | 'grow' | 'learn' };
 
 export interface ChatMessage { id: string; role: 'assistant' | 'user'; blocks: Block[]; chips: string[] }
 
@@ -49,6 +50,7 @@ export const CHIPS = {
   emergency: 'Is my emergency fund enough?',
   data: 'What did the data check find?',
   lessons: 'Teach me about an investment',
+  explore: 'Explore investment options',
 };
 
 function mixRows(c: Ctx) {
@@ -115,9 +117,10 @@ export function respond(input: string, c: Ctx): ChatMessage {
 
   // instrument lessons
   const lessonMatch: [string[], string][] = [
+    [['reit', 'real estate trust', 'real estate investment'], 'reit'], [['invit', 'infrastructure trust', 'infrastructure investment'], 'invit'],
     [['fd', 'fixed deposit'], 'fd'], [['g-sec', 'gsec', 't-bill', 'tbill', 'treasury', 'retail direct', 'government bond', 'government securit'], 'gsec'],
     [['corporate bond', 'ncd', 'debenture'], 'bond'], [['debt fund', 'debt mutual', 'liquid fund'], 'debt-fund'],
-    [['equity fund', 'index fund', 'mutual fund', 'sip', 'elss'], 'equity-fund'], [['gold', 'sgb'], 'gold'], [['ppf', 'provident'], 'ppf'], [['nps', 'pension'], 'nps'],
+    [['equity fund', 'index fund', 'mutual fund', 'sip', 'elss'], 'equity-fund'], [['direct stock', 'shares', 'stock market', 'equity share'], 'stock'], [['gold', 'sgb'], 'gold'], [['ppf', 'provident'], 'ppf'], [['nps', 'pension'], 'nps'],
   ];
   for (const [words, id] of lessonMatch) {
     if (has(s, ...words)) {
@@ -135,10 +138,35 @@ export function respond(input: string, c: Ctx): ChatMessage {
       return msg(blocks, [CHIPS.mix, CHIPS.tax, CHIPS.lessons]);
     }
   }
+  // basic financial literacy → answer from the lesson itself, then offer it
+  const literacy: [string[], string][] = [
+    [['compounding', 'compound interest', 'inflation', 'saving vs', 'basics', 'how to start', 'beginner'], 'investing-basics'],
+    [['diversif', 'all eggs'], 'investment-risk'],
+    [['liquidity', 'liquid', 'lock-in', 'lock in'], 'emergency-liquidity'],
+    [['mistake', 'scam', 'fraud', 'do and don', 'dos and don', 'red flag'], 'mistakes'],
+  ];
+  for (const [words, tid] of literacy) {
+    if (has(s, ...words)) {
+      const t = topicById[tid];
+      return msg([
+        { kind: 'text', text: `**${t.title}.** ${t.tagline}` },
+        { kind: 'text', text: t.sections[0].body },
+        { kind: 'note', text: `Example: ${t.example}` },
+        { kind: 'action', label: 'Open the lesson & quiz', action: { type: 'open-topic', topicId: tid } },
+      ], [CHIPS.explore, CHIPS.mix, CHIPS.lessons]);
+    }
+  }
+  if (has(s, 'explore', 'what can i invest', 'investment options', 'where to invest', 'types of investment')) {
+    return msg([
+      { kind: 'text', text: 'Explore investments lists 11 options — FDs, G-Secs & T-Bills, PPF, corporate bonds, debt and equity funds, direct stocks, NPS, REITs, InvITs and gold — each with how it earns, risks, liquidity and tax. It is educational: not every option suits everyone.' },
+      { kind: 'action', label: 'Open Explore investments', action: { type: 'open-tab', tab: 'learn' } },
+    ], [CHIPS.mix, CHIPS.options, CHIPS.lessons]);
+  }
+
   if (has(s, 'teach', 'lesson', 'learn', 'investment type', 'instrument')) {
     return msg([
       { kind: 'text', text: 'Which one? Each lesson is four short lines: what it is, who it suits, the risk and the tax angle.' },
-    ], INSTRUMENT_LESSONS.slice(0, 6).map((l) => `Tell me about ${l.name.split(' (')[0]}`));
+    ], ['fd', 'gsec', 'equity-fund', 'stock', 'reit', 'invit'].map((id) => `Tell me about ${INSTRUMENT_LESSONS.find((l) => l.id === id)!.name.split(' (')[0]}`));
   }
 
   if (has(s, 'why', 'fit', 'mismatch')) {
@@ -199,6 +227,7 @@ export function respond(input: string, c: Ctx): ChatMessage {
         { label: 'If you sold everything today', value: `${fmtLakh(tax.sellAllTax)} tax (estimate)` },
       ] },
       ...tax.notes.map((n) => ({ kind: 'note', text: n } as Block)),
+      { kind: 'action', label: 'Open the tax basics lesson', action: { type: 'open-topic', topicId: 'tax-basics' } },
       { kind: 'note', text: `Rates from our ${tax.meta.financialYear} table, as stated in the design document (${tax.meta.lastVerified}) — not independently or legally verified. Estimates only; check with a qualified professional.` },
     ];
     return msg(blocks, [CHIPS.options, CHIPS.lessons, CHIPS.grow]);

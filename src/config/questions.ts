@@ -81,6 +81,19 @@ export const QUESTIONS: Question[] = [
     options: (a) => (GOALS_BY_STAGE[a.lifeStage ?? 'not-sure'] ?? GOALS_BY_STAGE['not-sure']).map((g) => ({ value: g, label: GOAL[g] })),
   },
   {
+    id: 'horizon', group: 'intro', type: 'single',
+    text: { en: 'When might you need most of this money?', hi: 'आपको इस पैसे के ज़्यादातर हिस्से की ज़रूरत कब पड़ सकती है?' },
+    examples: [{ en: 'e.g. a child’s college fees in 6 years → 5–10 years', hi: 'जैसे 6 साल बाद बच्चे की कॉलेज फीस → 5–10 साल' }],
+    why: { en: 'Money you need soon should not ride big market swings. Longer horizons can take more ups and downs.', hi: 'जल्द चाहिए पैसा बड़े उतार-चढ़ाव में नहीं होना चाहिए। लंबी अवधि ज़्यादा उतार-चढ़ाव झेल सकती है।' },
+    notSure: 'not-sure',
+    options: [
+      { value: '<3', label: { en: 'Within 3 years', hi: '3 साल के अंदर' } },
+      { value: '3-5', label: { en: '3 to 5 years', hi: '3 से 5 साल' } },
+      { value: '5-10', label: { en: '5 to 10 years', hi: '5 से 10 साल' } },
+      { value: '10+', label: { en: 'More than 10 years', hi: '10 साल से ज़्यादा' } },
+    ],
+  },
+  {
     id: 'incomeType', group: 'intro', type: 'single',
     text: { en: 'How do you earn?', hi: 'आपकी कमाई कैसे होती है?' },
     why: { en: 'Variable income needs a bigger emergency buffer.', hi: 'अनियमित आय के लिए बड़ा आपातकालीन बफ़र चाहिए।' },
@@ -125,6 +138,18 @@ export const QUESTIONS: Question[] = [
     notSure: 6,
   },
   {
+    id: 'incomeNeed', group: 'capacity', type: 'single',
+    text: { en: 'Do you need your investments to pay you a regular income?', hi: 'क्या आपको अपने निवेश से नियमित आय चाहिए?' },
+    examples: [{ en: 'e.g. monthly money after retirement, or rent you rely on', hi: 'जैसे सेवानिवृत्ति के बाद मासिक पैसा' }],
+    why: { en: 'If you need steady income or quick access, more of your money may need to be in stable, income-paying options.', hi: 'अगर नियमित आय या जल्दी पैसा चाहिए, तो ज़्यादा हिस्सा स्थिर, आय देने वाले विकल्पों में होना चाहिए।' },
+    notSure: 'not-sure',
+    options: [
+      { value: 'no', label: { en: 'No — I’m growing it for later', hi: 'नहीं — बाद के लिए बढ़ा रहा/रही हूँ' } },
+      { value: 'some', label: { en: 'A little, or occasionally', hi: 'थोड़ी, या कभी-कभी' } },
+      { value: 'yes', label: { en: 'Yes — I rely on it', hi: 'हाँ — मैं इस पर निर्भर हूँ' } },
+    ],
+  },
+  {
     id: 'insurance', group: 'capacity', type: 'multi',
     text: { en: 'Which insurance do you already have?', hi: 'आपके पास पहले से कौन-सा बीमा है?' },
     why: { en: 'Insurance protects your investments from being used up in an emergency.', hi: 'बीमा आपात स्थिति में आपके निवेश को खर्च होने से बचाता है।' },
@@ -133,6 +158,18 @@ export const QUESTIONS: Question[] = [
       { value: 'health', label: { en: 'Health insurance', hi: 'स्वास्थ्य बीमा' } },
       { value: 'term', label: { en: 'Term life insurance', hi: 'टर्म जीवन बीमा' } },
       { value: 'none', label: { en: 'None yet', hi: 'अभी कोई नहीं' } },
+    ],
+  },
+  {
+    id: 'experience', group: 'behaviour', type: 'single',
+    text: { en: 'How long have you been investing in shares or mutual funds?', hi: 'आप कितने समय से शेयर या म्यूचुअल फंड में निवेश कर रहे हैं?' },
+    why: { en: 'Experience of real market falls helps judge how comfortable you may be with them. Beginners are not penalised.', hi: 'बाज़ार की असली गिरावट का अनुभव यह समझने में मदद करता है कि आप कितने सहज हैं। नए निवेशकों को कोई नुकसान नहीं।' },
+    notSure: 'not-sure',
+    options: [
+      { value: 'none', label: { en: 'I haven’t started yet', hi: 'अभी शुरू नहीं किया' } },
+      { value: '<2', label: { en: 'Less than 2 years', hi: '2 साल से कम' } },
+      { value: '2-5', label: { en: '2 to 5 years', hi: '2 से 5 साल' } },
+      { value: '5+', label: { en: 'More than 5 years', hi: '5 साल से ज़्यादा' } },
     ],
   },
   {

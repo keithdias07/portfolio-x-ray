@@ -7,6 +7,7 @@ import { AllocationBar, Chip, TaxChip } from '../components/kit';
 import { cx } from '../components/ui';
 import { lessonById } from '../data/instruments';
 import { topics } from '../data/learn';
+import { passedCount } from '../lib/learning';
 import { personaById } from '../engine/aa';
 import type { AssistantAction, Block, ChatMessage } from '../engine/assistant';
 import { fmtINR, fmtLakh } from '../lib/format';
@@ -24,7 +25,7 @@ function Home() {
   const p = d.portfolio;
   if (!a || !p) return <div className="p-6 text-slate-500">No portfolio yet.</div>;
   const adv = a.advice;
-  const passed = topics.filter((t) => (s.learn.quizBest[t.id] ?? 0) >= 2).length;
+  const passed = passedCount(topics, s.learn.quizBest);
   const name = s.mode === 'sample' ? personaById(s.personaId).displayName.split(' ')[0] : '';
   const incomplete = incompleteNotes(s, (id) => id).length;
 
@@ -76,11 +77,11 @@ function Home() {
               <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
             </button>
           )}
-          <button onClick={() => openSheet({ type: 'library' })} className="flex w-full items-center gap-3 rounded-2xl bg-white p-4 text-left ring-1 ring-slate-100 cursor-pointer">
+          <button onClick={() => set({ tab: 'learn', chatOpen: false })} className="flex w-full items-center gap-3 rounded-2xl bg-white p-4 text-left ring-1 ring-slate-100 cursor-pointer">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-violet-50 text-violet-700"><BookOpen className="h-4 w-4" /></span>
             <span className="flex-1">
               <span className="block text-[14px] font-semibold text-slate-900">{tr(l, 'lessons')}</span>
-              <span className="block text-[12px] text-slate-500">{passed} of {topics.length} passed · bonds, G-Secs, funds, REITs, risk…</span>
+              <span className="block text-[12px] text-slate-500">{passed} of {topics.length} passed · plus Explore investments: FDs, G-Secs, REITs, InvITs…</span>
             </span>
             <ChevronRight className="h-4 w-4 text-slate-400" />
           </button>
@@ -218,11 +219,13 @@ function BlockView({ b }: { b: Block }) {
   }
 }
 
-export function LessonCard({ id, compact }: { id: string; compact?: boolean }): ReactNode {
+export function LessonCard({ id, compact, full }: { id: string; compact?: boolean; full?: boolean }): ReactNode {
   const { openSheet } = useStore();
   const l = lessonById[id];
   if (!l) return null;
-  const rows: [string, string][] = [['What', l.what], ['Suits', l.suits], ['Risk', l.risk], ['Tax', l.tax]];
+  const rows: [string, string][] = full
+    ? [['What', l.what], ['Earn', l.earn], ['Risk', l.risk], ['Access', l.liquidity], ['Tax', l.tax], ['Consider', l.suits]]
+    : [['What', l.what], ['Earn', l.earn], ['Risk', l.risk], ['Tax', l.tax]];
   return (
     <div className="rounded-xl border border-slate-200 p-3">
       <div className="flex items-start justify-between gap-2">
@@ -232,9 +235,22 @@ export function LessonCard({ id, compact }: { id: string; compact?: boolean }): 
       {!compact && (
         <dl className="mt-2 space-y-1">
           {rows.map(([k, v]) => (
-            <div key={k} className="grid grid-cols-[44px_1fr] gap-2 text-[12.5px] leading-snug"><dt className="font-semibold text-slate-400">{k}</dt><dd className="text-slate-700">{v}</dd></div>
+            <div key={k} className="grid grid-cols-[56px_1fr] gap-2 text-[12.5px] leading-snug"><dt className="font-semibold text-slate-400">{k}</dt><dd className="text-slate-700">{v}</dd></div>
           ))}
         </dl>
+      )}
+      {full && (
+        <>
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="rounded-lg bg-emerald-50 p-2.5"><div className="text-[11px] font-bold uppercase text-emerald-800">Pros</div>{l.pros.map((x) => <p key={x} className="mt-0.5 text-[12.5px] text-emerald-900">+ {x}</p>)}</div>
+            <div className="rounded-lg bg-rose-50 p-2.5"><div className="text-[11px] font-bold uppercase text-rose-800">Cons</div>{l.cons.map((x) => <p key={x} className="mt-0.5 text-[12.5px] text-rose-900">− {x}</p>)}</div>
+          </div>
+          {l.verify && <p className="mt-2 rounded-lg bg-amber-50 px-2.5 py-1.5 text-[12px] text-amber-900">Tax treatment needs verification — no estimate is calculated for it in this app.</p>}
+          {l.links.length > 0 && (
+            <div className="mt-2 text-[12px] text-slate-600">Official sources: {l.links.map((x, i) => <span key={x.url}>{i > 0 && ' · '}<a href={x.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-emerald-700 underline">{x.label}</a></span>)}</div>
+          )}
+          <p className="mt-2 text-[11px] text-slate-400">Educational only. Not a recommendation; whether it suits you depends on your goals, horizon and risk profile. This prototype shows no live prices and does not buy anything.</p>
+        </>
       )}
       {l.topicId && <button onClick={() => openSheet({ type: 'topic', id: l.topicId! })} className="mt-1 min-h-8 py-1.5 text-[12px] font-semibold text-violet-700 underline cursor-pointer">Full lesson & quiz</button>}
     </div>

@@ -6,7 +6,8 @@
 import { CAPITAL_GAINS, CESS } from '../config/tax';
 
 export type CalcMode = 'sip' | 'lumpsum';
-export type AfterTaxInstrument = 'equity-fund' | 'fd' | 'debt-fund';
+/** 'to-verify': instruments whose tax rule is unverified (gold, REIT/InvIT, PPF, NPS) — no tax is estimated */
+export type AfterTaxInstrument = 'equity-fund' | 'fd' | 'debt-fund' | 'to-verify';
 
 export interface CalcInput {
   mode: CalcMode;
@@ -36,7 +37,7 @@ export const investedAt = (i: CalcInput, years: number) => (i.mode === 'sip' ? i
 
 /** Tax on the growth portion at exit, by instrument rule (simplified, single redemption). */
 export function taxOnGrowth(growth: number, inst: AfterTaxInstrument, marginal: number): number {
-  if (growth <= 0) return 0;
+  if (growth <= 0 || inst === 'to-verify') return 0;
   if (inst === 'equity-fund') return Math.max(0, growth - CAPITAL_GAINS.equityLtcgExemption) * CAPITAL_GAINS.equityLongTermRate * (1 + CESS);
   return growth * marginal; // FD interest and post-Apr-2023 debt funds: slab
 }
@@ -67,6 +68,29 @@ export function series(i: CalcInput): YearPoint[] {
     out.push({ year: y, invested, growth: Math.max(0, value - invested), value });
   }
   return out;
+}
+
+export interface Breakdown {
+  invested: number;          // what you put in (nominal)
+  growth: number;            // estimated growth before tax
+  valueBeforeTax: number;    // estimated value before tax
+  tax: number | null;        // estimated tax (null = not estimated / after-tax off)
+  valueAfterTax: number | null;
+  todayMoney: number;        // after-tax (if on) value in today's money
+}
+
+/** Separates invested capital, growth, estimated tax, post-tax proceeds and inflation-adjusted value. */
+export function breakdown(i: CalcInput, ratePct = i.ratePct): Breakdown {
+  const nominal = { ...i, ratePct, inflationAdjusted: false };
+  const invested = investedAt(i, i.years);
+  const valueBeforeTax = valueAt({ ...nominal, afterTax: null }, i.years, ratePct);
+  const taxOn = i.afterTax && i.afterTax !== 'to-verify';
+  const valueAfterTax = taxOn ? valueAt(nominal, i.years, ratePct) : null;
+  const todayMoney = valueAt({ ...i, ratePct, inflationAdjusted: true, afterTax: taxOn ? i.afterTax : null }, i.years, ratePct);
+  return {
+    invested, growth: valueBeforeTax - invested, valueBeforeTax,
+    tax: taxOn ? valueBeforeTax - (valueAfterTax as number) : null, valueAfterTax, todayMoney,
+  };
 }
 
 export function range(i: CalcInput, r: { cautious: number; expected: number; optimistic: number }) {

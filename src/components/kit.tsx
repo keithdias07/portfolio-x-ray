@@ -26,17 +26,15 @@ export function Chip({ children, onClick, active, className }: { children: React
 }
 
 export function TaxChip({ text, verified = true, onClick }: { text: string; verified?: boolean; onClick?: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cx('inline-flex min-h-6 items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold ring-1 ring-inset cursor-pointer',
-        verified ? 'bg-indigo-50 text-indigo-700 ring-indigo-200' : 'bg-amber-50 text-amber-800 ring-amber-200')}
-      title={verified ? 'Tax rule' : 'Tax rule marked “to verify” — estimate only'}
-    >
-      <BadgeIndianRupee className="h-3 w-3" /> {text}{!verified && ' *'}
-    </button>
-  );
+  const className = cx('inline-flex min-h-6 items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold ring-1 ring-inset',
+    onClick && 'cursor-pointer',
+    verified ? 'bg-indigo-50 text-indigo-700 ring-indigo-200' : 'bg-amber-50 text-amber-800 ring-amber-200');
+  const title = verified ? 'Tax rule' : 'Tax rule marked “to verify” — estimate only';
+  const body = <><BadgeIndianRupee className="h-3 w-3" /> {text}{!verified && ' *'}</>;
+  // only interactive when it opens something; otherwise a span, so it can sit inside other buttons
+  return onClick
+    ? <button type="button" onClick={onClick} className={className} title={title}>{body}</button>
+    : <span className={className} title={title}>{body}</span>;
 }
 
 const JARGON: Record<string, string> = {

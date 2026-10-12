@@ -15,6 +15,8 @@ export interface RiskResult {
   capacityLabel: RiskLabel;
   toleranceLabel: RiskLabel;
   limiting: 'capacity' | 'tolerance' | 'none';
+  /** willingness capped at Moderate because the user has never invested */
+  beginnerCap: boolean;
   horizonYears: number;
   bufferMonths: number;
   bufferTarget: number;
@@ -34,6 +36,11 @@ export const STAGE_LABEL: Record<LifeStage, string> = {
   'pre-retirement': 'pre-retirement', retired: 'retired',
 };
 
+/** years implied by the "when do you need the money" answer; null = not given or long-term */
+/** A capacity factor scoring below this is described as limiting risk. */
+const LIMITING_SCORE = 75;
+export const HORIZON_YEARS: Record<string, number | null> = { '<3': 2, '3-5': 4, '5-10': 7, '10+': null, 'not-sure': null };
+
 export function stageOf(a: Answers): LifeStage {
   return a.lifeStage && a.lifeStage !== 'not-sure' ? a.lifeStage : 'building';
 }
@@ -47,7 +54,11 @@ export function bufferMonthsFor(a: Answers): number {
 export function computeRisk(a: Answers, liquidCash: number): RiskResult {
   const stage = stageOf(a);
   const age = a.age ?? 35;
-  const horizonYears = stage === 'retired' ? 5 : Math.max(1, RISK_CONFIG.retirementAge - age);
+  const lifeHorizon = stage === 'retired' ? 5 : Math.max(1, RISK_CONFIG.retirementAge - age);
+  // the user's own answer about when the money is needed caps the life-stage horizon
+  const goalHorizon = HORIZON_YEARS[a.horizon ?? 'not-sure'];
+  const horizonYears = goalHorizon != null ? Math.min(lifeHorizon, goalHorizon) : lifeHorizon;
+  const horizonFromGoal = goalHorizon != null && goalHorizon < lifeHorizon;
   const income = a.monthlyIncome ?? 0;
   const expenses = a.monthlyExpenses ?? income * 0.6;
   const emi = a.monthlyEmi ?? 0;
@@ -59,7 +70,7 @@ export function computeRisk(a: Answers, liquidCash: number): RiskResult {
   const surplusRatio = income > 0 ? (income - expenses - emi) / income : 0;
 
   const cap: RiskFactor[] = [
-    { key: 'horizon', label: 'Time horizon', score: clamp((horizonYears / 25) * 100), note: `About ${horizonYears} years to ${stage === 'retired' ? 'your main goals' : 'retirement'}` },
+    { key: 'horizon', label: 'Time horizon', score: clamp((horizonYears / 25) * 100), note: horizonFromGoal ? `You may need most of this money in about ${horizonYears} years` : `About ${horizonYears} years to ${stage === 'retired' ? 'your main goals' : 'retirement'}` },
     { key: 'dependents', label: 'Dependents', score: [100, 75, 55][deps] ?? 40, note: deps === 0 ? 'No one depends on your income' : `${deps} ${deps === 1 ? 'person depends' : 'people depend'} on your income` },
     { key: 'stability', label: 'Income stability', score: a.incomeType === 'salaried' ? 80 : a.incomeType === 'variable' ? 45 : 60, note: a.incomeType === 'variable' ? 'Variable income' : a.incomeType === 'salaried' ? 'Steady salary' : 'Income type not given' },
     { key: 'emi', label: 'EMI burden', score: emiRatio < 0.1 ? 100 : emiRatio < 0.25 ? 75 : emiRatio < 0.4 ? 45 : 20, note: emi > 0 ? `EMIs take ${Math.round(emiRatio * 100)}% of your take-home pay` : 'No EMIs' },
@@ -76,7 +87,10 @@ export function computeRisk(a: Answers, liquidCash: number): RiskResult {
     { key: 'pick', label: 'Preferred range of outcomes', score: t.pickPortfolio[a.pickPortfolio ?? 'not-sure'] ?? 50, note: ({ A: 'Prefers small swings', B: 'Accepts moderate swings', C: 'Accepts large swings for higher growth', 'not-sure': 'Not sure' } as Record<string, string>)[a.pickPortfolio ?? 'not-sure'] },
     { key: 'past', label: 'Past behaviour in a fall', score: t.pastBehaviour[a.pastBehaviour ?? 'not-sure'] ?? 50, note: ({ sold: 'Sold during a past fall', held: 'Held during a past fall', 'bought-more': 'Bought more in a past fall', 'not-invested': 'Wasn’t invested then', 'not-sure': 'Not sure' } as Record<string, string>)[a.pastBehaviour ?? 'not-sure'] },
   ];
-  const toleranceScore = Math.round(tol.reduce((s, f) => s + f.score, 0) / tol.length);
+  const rawTolerance = Math.round(tol.reduce((s, f) => s + f.score, 0) / tol.length);
+  // safeguard: someone who has never invested hasn't lived through a real fall yet, so willingness is capped at Moderate
+  const beginnerCap = a.experience === 'none' && rawTolerance >= RISK_CONFIG.cutoffs.moderate;
+  const toleranceScore = beginnerCap ? RISK_CONFIG.cutoffs.moderate - 1 : rawTolerance;
 
   const capacityLabel = labelFor(capacityScore);
   const toleranceLabel = labelFor(toleranceScore);
@@ -84,16 +98,19 @@ export function computeRisk(a: Answers, liquidCash: number): RiskResult {
   const label = labelFor(finalScore);
   const limiting = capacityLabel === toleranceLabel ? 'none' : capacityScore < toleranceScore ? 'capacity' : 'tolerance';
 
-  const weakest = [...cap].sort((x, y) => x.score - y.score).slice(0, 2);
   const strongest = [...cap].sort((x, y) => y.score - x.score)[0];
+  // only factors that genuinely hold capacity back are called limits, never the factor that helps most
+  const weakest = [...cap].filter((f) => f !== strongest && f.score < LIMITING_SCORE).sort((x, y) => x.score - y.score).slice(0, 2);
   const reasons = [
     `${strongest.note} — this helps your ability to take risk.`,
     ...weakest.map((f) => `${f.note} — this limits how much risk you can carry.`),
+    ...(beginnerCap ? ['You haven’t invested before, so we treat your comfort with risk as Moderate until you’ve seen a real market fall.'] : []),
   ];
 
   return {
     label, capacityScore, toleranceScore, capacityLabel, toleranceLabel, limiting, horizonYears,
     bufferMonths, bufferTarget, bufferCoverMonths, capacityFactors: cap, toleranceFactors: tol, reasons,
-    transparency: `Based on your stage (${STAGE_LABEL[stage]}, about ${horizonYears} years to ${stage === 'retired' ? 'your goals' : 'retirement'}), your capacity is ${capacityLabel.toLowerCase()}.`,
+    beginnerCap,
+    transparency: `Based on your stage (${STAGE_LABEL[stage]}, about ${horizonYears} years ${horizonFromGoal ? 'until you need the money' : `to ${stage === 'retired' ? 'your goals' : 'retirement'}`}), your capacity is ${capacityLabel.toLowerCase()}.`,
   };
 }

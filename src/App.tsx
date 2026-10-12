@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { ArrowLeft, Bot, Eye, EyeOff, Settings, Sprout, Wallet } from 'lucide-react';
+import { ArrowLeft, Bot, Eye, EyeOff, GraduationCap, Settings, Sprout, Wallet } from 'lucide-react';
 import { useStore, type Tab } from './store';
 import { tr } from './i18n';
 import { cx } from './components/ui';
@@ -10,9 +10,11 @@ import { Reveal } from './screens/Reveal';
 import { AssistantTab } from './screens/AssistantTab';
 import { GrowTab } from './screens/GrowTab';
 import { MoneyTab } from './screens/MoneyTab';
+import { LearnTab } from './screens/LearnTab';
 import { SheetHost } from './screens/sheets';
 import { PresenterPanel } from './screens/DemoPanel';
 import { Mark } from './components/Mark';
+import { INTRO } from './config/questions';
 
 function TopBar() {
   const { s, set, openSheet } = useStore();
@@ -25,7 +27,7 @@ function TopBar() {
       const i = order.indexOf(s.connectStep as (typeof order)[number]);
       if (s.connectStep === 'declined' || s.connectStep === 'manual') return set({ connectStep: 'why' });
       if (i > 0 && s.connectStep !== 'check') return set({ connectStep: order[i - 1] });
-      return set({ stage: 'intro', introIndex: 4 });
+      return set({ stage: 'intro', introIndex: INTRO.length - 1 });
     }
     if (s.stage === 'later') return s.laterIndex > 0 ? set({ laterIndex: s.laterIndex - 1 }) : set(s.mode === 'sample' ? { stage: 'welcome' } : { stage: 'connect', connectStep: 'confirm' });
     if (s.stage === 'reveal') return s.mode === 'sample' ? set({ stage: 'welcome' }) : set({ stage: 'later' });
@@ -58,16 +60,17 @@ function TopBar() {
   );
 }
 
-const TABS: { id: Tab; icon: typeof Bot; key: 'tabAssistant' | 'tabGrow' | 'tabMoney' }[] = [
+const TABS: { id: Tab; icon: typeof Bot; key: 'tabAssistant' | 'tabGrow' | 'tabMoney' | 'tabLearn' }[] = [
   { id: 'assistant', icon: Bot, key: 'tabAssistant' },
   { id: 'grow', icon: Sprout, key: 'tabGrow' },
   { id: 'money', icon: Wallet, key: 'tabMoney' },
+  { id: 'learn', icon: GraduationCap, key: 'tabLearn' },
 ];
 
 function TabBar() {
   const { s, set } = useStore();
   return (
-    <nav className="grid grid-cols-3 border-t border-slate-100 bg-white px-2 pb-2 pt-1.5">
+    <nav className="grid grid-cols-4 border-t border-slate-100 bg-white px-2 pb-2 pt-1.5">
       {TABS.map((t) => {
         const on = s.tab === t.id;
         const Icon = t.icon;
@@ -91,7 +94,7 @@ function Screen() {
     case 'later': return <QuestionFlow group="later" />;
     case 'reveal': return <Reveal />;
     default:
-      return s.tab === 'grow' ? <GrowTab /> : s.tab === 'money' ? <MoneyTab /> : <AssistantTab />;
+      return s.tab === 'grow' ? <GrowTab /> : s.tab === 'money' ? <MoneyTab /> : s.tab === 'learn' ? <LearnTab /> : <AssistantTab />;
   }
 }
 

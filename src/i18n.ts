@@ -97,6 +97,9 @@ export const S = {
   tabAssistant: { en: 'Assistant', hi: 'सहायक' },
   tabGrow: { en: 'Grow', hi: 'बढ़ाएँ' },
   tabMoney: { en: 'My money', hi: 'मेरा पैसा' },
+  tabLearn: { en: 'Learn', hi: 'सीखें' },
+  exploreTitle: { en: 'Explore investments', hi: 'निवेश विकल्प देखें' },
+  learnTitle: { en: 'Learn & Explore', hi: 'सीखें और जानें' },
   totalValue: { en: 'Total value', hi: 'कुल मूल्य' },
   simpleView: { en: 'Simple view', hi: 'सरल दृश्य' },
   talkItThrough: { en: 'Talk it through', hi: 'इस पर बात करें' },
@@ -108,6 +111,9 @@ export const S = {
   'verdict.too-aggressive': { en: 'More risk than your profile can carry', hi: 'आपके प्रोफ़ाइल की क्षमता से ज़्यादा जोखिम' },
   'verdict.idle-cash': { en: 'Too much money sitting idle', hi: 'बहुत ज़्यादा पैसा बेकार पड़ा है' },
   'verdict.concentrated': { en: 'Too much riding on one holding', hi: 'एक ही होल्डिंग पर बहुत ज़्यादा निर्भरता' },
+  'verdict.buffer-short': { en: 'Emergency fund comes first', hi: 'पहले आपातकालीन फंड' },
+  'verdict.short-horizon': { en: 'Money needed soon is in volatile assets', hi: 'जल्द चाहिए पैसा उतार-चढ़ाव वाले निवेश में है' },
+  'verdict.needs-income': { en: 'Little steady income in your mix', hi: 'आपके मिश्रण में स्थिर आय कम है' },
 } satisfies Record<string, L>;
 
 export type SKey = keyof typeof S;

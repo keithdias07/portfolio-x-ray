@@ -5,14 +5,22 @@ import { Flag, Info, Rocket } from 'lucide-react';
 import { useStore, type CalcState } from '../store';
 import { tr } from '../i18n';
 import { CALC_DEFAULTS, RETURN_ASSUMPTIONS } from '../config/profile';
-import { milestoneYear, range, series, valueAt, type AfterTaxInstrument } from '../engine/calc';
+import { breakdown, milestoneYear, range, series, valueAt, type AfterTaxInstrument } from '../engine/calc';
 import { Chip, Term } from '../components/kit';
 import { cx } from '../components/ui';
 import { amountInWords, fmtINR, fmtLakh } from '../lib/format';
 
 const AFTER_TAX: { id: AfterTaxInstrument; label: string }[] = [
   { id: 'equity-fund', label: 'Equity fund' }, { id: 'fd', label: 'FD' }, { id: 'debt-fund', label: 'Debt fund' },
+  { id: 'to-verify', label: 'Gold / REIT / InvIT / PPF / NPS' },
 ];
+
+const TAX_NOTE: Record<AfterTaxInstrument, string> = {
+  'equity-fund': '12.5% on long-term gains above ₹1.25 lakh, as if all units were sold at the end (simplified; units held under 12 months would be taxed at 20%).',
+  fd: 'Interest taxed every year at your marginal rate, so growth compounds on what is left after tax.',
+  'debt-fund': 'Gains taxed at your slab rate when you redeem (units bought on or after 1 April 2023).',
+  'to-verify': 'Tax treatment for these is marked “to verify”, so no tax is estimated — the after-tax figure is not shown.',
+};
 
 export function GrowTab() {
   const { s, set, d } = useStore();
@@ -30,6 +38,7 @@ export function GrowTab() {
   const spread = { cautious: c.ratePct - (assumptions.expected - assumptions.cautious), expected: c.ratePct, optimistic: c.ratePct + (assumptions.optimistic - assumptions.expected) };
   const r = range(input, spread);
   const final = data[data.length - 1];
+  const b = breakdown(input);
   const milestone = milestoneYear({ ...input, years: 50 }, CALC_DEFAULTS.milestone, 50);
   const earlier = valueAt({ ...input, years: c.years + 5 }, c.years + 5);
 
@@ -48,7 +57,7 @@ export function GrowTab() {
       </div>
 
       <div className="rounded-3xl bg-ink-900 p-5 text-white">
-        <div className="text-[12.5px] text-slate-400">Could grow to (expected, {c.inflationAdjusted ? "in today’s money" : 'in future rupees'}{c.afterTax ? ', after tax' : ''})</div>
+        <div className="text-[12.5px] text-slate-400">Could grow to (expected, {c.inflationAdjusted ? "in today’s money" : 'in future rupees'}{c.afterTax && c.afterTax !== 'to-verify' ? ', after estimated tax' : c.afterTax === 'to-verify' ? ', tax not estimated' : ''})</div>
         <div className="mt-1 text-[34px] font-bold tracking-tight tabular">{fmtLakh(r.expected)}</div>
         <div className="mt-3 grid grid-cols-3 gap-2 text-center">
           {([['Cautious', r.cautious, spread.cautious], ['Expected', r.expected, spread.expected], ['Optimistic', r.optimistic, spread.optimistic]] as const).map(([k, v, rate]) => (
@@ -93,10 +102,36 @@ export function GrowTab() {
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[12px] text-slate-500">Taxed as:</span>
             {AFTER_TAX.map((t) => <Chip key={t.id} active={c.afterTax === t.id} onClick={() => update({ afterTax: t.id })} className="py-1 text-[12px]">{t.label}</Chip>)}
-            <p className="w-full text-[11.5px] text-slate-500">{c.afterTax === 'equity-fund' ? '12.5% on gains above ₹1.25 lakh at the end (simplified).' : c.afterTax === 'fd' ? <>Interest taxed every year at your <Term t="marginal rate" /> ({(marginal * 100).toFixed(1)}%).</> : <>Gains taxed at your <Term t="slab">slab</Term> rate on redemption.</>}</p>
+            <p className="w-full text-[11.5px] text-slate-500">{TAX_NOTE[c.afterTax]}{(c.afterTax === 'fd' || c.afterTax === 'debt-fund') && <> Your <Term t="marginal rate" />: {(marginal * 100).toFixed(1)}%.</>}</p>
           </div>
         )}
       </div>
+
+      <section className="rounded-3xl bg-white p-4 ring-1 ring-slate-100" aria-label="Breakdown">
+        <div className="text-[13.5px] font-semibold text-slate-900">Breakdown (expected scenario, {c.ratePct}% a year)</div>
+        <dl className="mt-2 space-y-1 text-[13px]">
+          {[
+            ['You put in', fmtINR(b.invested)],
+            ['Estimated growth (before tax)', fmtINR(b.growth)],
+            ['Estimated value before tax', fmtINR(b.valueBeforeTax)],
+            ['Estimated tax', c.afterTax === 'to-verify' ? 'Not estimated — rule to verify' : b.tax == null ? 'Turn on “After tax” to estimate' : fmtINR(b.tax)],
+            ['Estimated value after tax', b.valueAfterTax == null ? '—' : fmtINR(b.valueAfterTax)],
+            [`In today’s money (${CALC_DEFAULTS.inflation}% inflation)`, fmtINR(b.todayMoney)],
+          ].map(([k, v]) => (
+            <div key={k} className="flex justify-between gap-3 rounded-lg bg-slate-50 px-3 py-1.5"><dt className="text-slate-600">{k}</dt><dd className="text-right font-semibold tabular text-slate-900">{v}</dd></div>
+          ))}
+        </dl>
+        <details className="mt-2 text-[12px] text-slate-600">
+          <summary className="cursor-pointer font-semibold text-slate-700">Assumptions used</summary>
+          <ul className="mt-1 list-disc space-y-0.5 pl-5">
+            <li>Returns: cautious {spread.cautious.toFixed(1)}%, expected {spread.expected.toFixed(1)}%, optimistic {spread.optimistic.toFixed(1)}% a year — assumptions for a {label.toLowerCase()} profile, not predictions.</li>
+            <li>{c.mode === 'sip' ? 'SIP: monthly compounding, payment at the start of each month.' : 'Lump sum: yearly compounding.'}</li>
+            <li>Inflation: {CALC_DEFAULTS.inflation}% a year for “today’s money”.</li>
+            <li>Tax: rates as stated in our design document (not independently verified). {c.afterTax ? TAX_NOTE[c.afterTax] : 'After-tax mode is off.'}</li>
+            <li>No costs, exit loads or fund expenses are deducted.</li>
+          </ul>
+        </details>
+      </section>
 
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-2xl bg-white p-3.5 ring-1 ring-slate-100">

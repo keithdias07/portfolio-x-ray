@@ -4,9 +4,9 @@
  */
 import { LIFE_STAGE_EQUITY_SHIFT, SUITABILITY_CONFIG, TARGETS, type Allocation, type BroadKey, type LifeStage, type RiskLabel } from '../config/profile';
 import type { CanonicalPortfolio } from './normalise';
-import type { InstrumentType } from '../data/securities';
+import { instrumentById, type InstrumentType } from '../data/securities';
 
-export type VerdictKind = 'fits' | 'too-aggressive' | 'too-cautious' | 'idle-cash' | 'concentrated';
+export type VerdictKind = 'fits' | 'buffer-short' | 'too-aggressive' | 'short-horizon' | 'too-cautious' | 'idle-cash' | 'concentrated' | 'needs-income';
 export interface Verdict { kind: VerdictKind; severity: 'High' | 'Medium' | 'Low'; text: string; holdingId?: string }
 export interface Gap { assetClass: BroadKey; current: number; target: number; drift: number; amount: number }
 
@@ -34,9 +34,12 @@ export function targetAllocation(label: RiskLabel, stage: LifeStage): Allocation
 const SEV_ORDER = { High: 0, Medium: 1, Low: 2 } as const;
 const SINGLE_ISSUER: InstrumentType[] = ['Direct stock', 'Corporate bond', 'REIT', 'InvIT', 'Other'];
 // when idle cash and "too cautious" both fire, the excess cash is the cause — lead with it
-const KIND_ORDER: VerdictKind[] = ['too-aggressive', 'idle-cash', 'too-cautious', 'concentrated', 'fits'];
+// an emergency-buffer shortfall comes first: it matters before any investing decision
+const KIND_ORDER: VerdictKind[] = ['buffer-short', 'too-aggressive', 'short-horizon', 'idle-cash', 'too-cautious', 'concentrated', 'needs-income', 'fits'];
 
-export function assessSuitability(p: CanonicalPortfolio, label: RiskLabel, stage: LifeStage, bufferTarget: number): Suitability {
+export interface SuitabilityContext { horizon?: string; incomeNeed?: string; liquidCash?: number; bufferMonths?: number; monthlyExpenses?: number }
+
+export function assessSuitability(p: CanonicalPortfolio, label: RiskLabel, stage: LifeStage, bufferTarget: number, ctx: SuitabilityContext = {}): Suitability {
   const c = SUITABILITY_CONFIG;
   const investable = p.totalValue - p.byClass.other;
   const pct = (v: number) => (investable > 0 ? (v / investable) * 100 : 0);
@@ -65,6 +68,33 @@ export function assessSuitability(p: CanonicalPortfolio, label: RiskLabel, stage
       verdicts.push({ kind: 'concentrated', severity: share > 25 ? 'High' : 'Medium', text: `${h.name} is ${share.toFixed(0)}% of your portfolio.`, holdingId: h.holdingId });
     }
   }
+  // sector concentration across direct stocks (diversified funds excluded)
+  const bySector = new Map<string, number>();
+  for (const h of p.holdings) {
+    if (h.instrumentType !== 'Direct stock' || !h.securityId) continue;
+    const sector = instrumentById[h.securityId]?.sector ?? 'Other';
+    bySector.set(sector, (bySector.get(sector) ?? 0) + h.currentValue);
+  }
+  for (const [sector, value] of bySector) {
+    const share = pct(value);
+    if (share > c.singleSectorMax) verdicts.push({ kind: 'concentrated', severity: share > 35 ? 'High' : 'Medium', text: `${sector} stocks make up ${share.toFixed(0)}% of your portfolio.` });
+  }
+
+  // liquidity and obligations: an emergency buffer comes before investing for growth
+  if (ctx.liquidCash != null && bufferTarget > 0 && ctx.liquidCash < bufferTarget) {
+    const months = ctx.monthlyExpenses ? ctx.liquidCash / ctx.monthlyExpenses : 0;
+    verdicts.push({ kind: 'buffer-short', severity: months < (ctx.bufferMonths ?? 6) / 2 ? 'High' : 'Medium', text: `Your savings and FDs cover about ${months.toFixed(1)} months of expenses; ${ctx.bufferMonths ?? 6} months is suggested for your stage.` });
+  }
+  // horizon: money needed within ~3 years mostly in equity
+  if (ctx.horizon === '<3' && eq.current > 40) {
+    verdicts.push({ kind: 'short-horizon', severity: 'Medium', text: `You may need most of this money within 3 years, but ${eq.current.toFixed(0)}% is in equity, which can fall sharply in the short term.` });
+  }
+  // regular income need vs income-paying assets
+  const incomeAssets = current.debt + current.cash;
+  if (ctx.incomeNeed === 'yes' && incomeAssets < 40) {
+    verdicts.push({ kind: 'needs-income', severity: 'Low', text: `You said you rely on regular income, but only ${incomeAssets.toFixed(0)}% of your money is in debt or cash, which usually pay steady interest.` });
+  }
+
   for (const a of p.accountValues) {
     const share = pct(a.value);
     if (share > c.singleAccountMax) verdicts.push({ kind: 'concentrated', severity: 'Low', text: `${share.toFixed(0)}% of your portfolio is in one account (${a.label}).` });

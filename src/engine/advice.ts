@@ -35,6 +35,9 @@ export const VERDICT_LINE: Record<VerdictKind, string> = {
   'too-aggressive': 'More risk than your profile can carry',
   'idle-cash': 'Too much money sitting idle',
   concentrated: 'Too much riding on one holding',
+  'buffer-short': 'Emergency fund comes first',
+  'short-horizon': 'Money needed soon is in volatile assets',
+  'needs-income': 'Little steady income in your mix',
 };
 
 const LESSONS_FOR: Record<BroadKey, string[]> = {
@@ -100,6 +103,23 @@ export function buildAdvice(a: Answers, risk: RiskResult, suit: Suitability, tax
       headline = h ? `${h.name} is ${((h.currentValue / suit.investable) * 100).toFixed(0)}% of your money` : 'Too much is in one place';
       doNothing = h ? `If ${h.name} fell 40% — not unusual for a single company — you’d lose about ${fmtLakh(h.currentValue * 0.4)}.` : 'A problem in one place could hit your whole portfolio.';
       if (h && h.unrealisedGain && h.unrealisedGain > 0) taxLine = `Trimming it would realise gains; long-term equity gains up to ₹1.25 lakh a year are exempt, so staggering sales can reduce tax.`;
+      break;
+    }
+    case 'buffer-short': {
+      const shortBy = Math.max(0, risk.bufferTarget - (p.holdings.filter((h) => h.broadClass === 'cash' || h.instrumentType === 'Fixed deposit').reduce((s2, h) => s2 + h.currentValue, 0)));
+      headline = `Build your emergency fund first — about ${fmtLakh(shortBy)} short`;
+      doNothing = 'Without a buffer, an emergency (a job loss or a hospital bill) could force you to sell investments at a bad time or take a costly loan.';
+      calcPrefill = { mode: 'sip', amount: Math.max(1000, Math.round((surplus * 0.5) / 500) * 500), years: 1, ratePct: 6 };
+      break;
+    }
+    case 'short-horizon': {
+      headline = 'Money you need soon is mostly in shares';
+      doNothing = 'Share prices can fall 20–30% in a bad year and may not recover before you need the money. Many people move money they need within 3 years into steadier options.';
+      break;
+    }
+    case 'needs-income': {
+      headline = 'You need regular income, but little of your money pays it';
+      doNothing = 'Growth assets may not pay you steadily; you might have to sell units to meet regular needs, possibly when prices are low.';
       break;
     }
     default:

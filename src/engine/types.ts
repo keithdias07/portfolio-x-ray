@@ -6,6 +6,12 @@ export interface Answers {
   age?: number;
   dependents?: number;
   goals?: string[];
+  /** when most of the money may be needed: '<3' | '3-5' | '5-10' | '10+' | 'not-sure' */
+  horizon?: string;
+  /** need for regular income from investments: 'no' | 'some' | 'yes' | 'not-sure' */
+  incomeNeed?: string;
+  /** investing experience: 'none' | '<2' | '2-5' | '5+' | 'not-sure' */
+  experience?: string;
   incomeType?: 'salaried' | 'variable' | 'not-sure';
   grossAnnual?: number;
   monthlyIncome?: number;

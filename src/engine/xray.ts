@@ -66,6 +66,8 @@ export interface Finding {
   impact: { valueAtStake: number; label: string };
   scenarios: Scenario[];
   learnTopicId: string;
+  /** plain-language reason the potential discrepancy could matter to the investor */
+  whyItMatters: string;
 }
 
 export interface Position {
@@ -111,6 +113,17 @@ export const RULES = [
   { id: 'R7', name: 'Fractional-unit tolerance', category: 'rounding', description: 'Mutual-fund unit difference within 0.01 units — treated as rounding, not an error.' },
 ] as const;
 
+/** Why each kind of potential discrepancy can matter — shown on every finding. */
+export const WHY_IT_MATTERS: Record<Category, string> = {
+  duplicate: 'If the same holding is counted twice, your total value and asset mix look different from reality, which can make your portfolio seem riskier or larger than it is.',
+  'corporate-action': 'If a split or bonus isn’t applied, the holding looks smaller and its cost per share is wrong — which distorts your gains, tax estimates and asset mix.',
+  'quantity-conflict': 'If one statement is out of date or wrong, decisions based on it — selling, rebalancing or estimating tax — could be off.',
+  'missing-cost': 'Without the purchase price, gains and capital-gains tax can’t be estimated. Some apps treat a missing cost as zero, which makes profits look bigger than they are.',
+  'stale-price': 'An old price may not be what you would get if you sold today, especially for bonds that rarely trade.',
+  'yield-label': 'The coupon is not your return. Comparing bonds by coupon instead of yield to maturity can make a bond look better or worse than it really is.',
+  rounding: 'Usually nothing — tiny unit differences between statements are normal. It is shown so you know they are expected.',
+};
+
 export const STALE_DAYS = 7;
 export const MF_UNIT_TOLERANCE = 0.01;
 /** price-uncertainty band for stale quotes: 0.1% per stale day, capped at 5% */
@@ -138,6 +151,7 @@ export function runXRay(input: XRayInput): XRayResult {
   const positions: Position[] = [];
   let fid = 0;
   const nextId = () => `XR-${String(++fid).padStart(3, '0')}`;
+  const addFinding = (f: Omit<Finding, 'whyItMatters'>) => findings.push({ ...f, whyItMatters: WHY_IT_MATTERS[f.category] });
 
   const holding = records.filter((r) => sourceById[r.sourceId]?.role === 'holding');
   const reference = records.filter((r) => sourceById[r.sourceId]?.role === 'reference');
@@ -175,7 +189,7 @@ export function runXRay(input: XRayInput): XRayResult {
       const over = dupQty * price;
       const id = nextId();
       findingIds.push(id);
-      findings.push({
+      addFinding({
         id, ruleId: 'R1', ruleName: 'Duplicate-position check', category: 'duplicate',
         severity: 'High', confidence: 'High',
         confidenceNote: 'Same demo identifier, same demat account and identical quantity in both sources. Name differences are cosmetic.',
@@ -232,7 +246,7 @@ export function runXRay(input: XRayInput): XRayResult {
         const under = (quantity - primary.quantity) * price;
         const id = nextId();
         findingIds.push(id);
-        findings.push({
+        addFinding({
           id, ruleId: 'R2', ruleName: 'Corporate-action adjustment check', category: 'corporate-action',
           severity: 'High', confidence: 'High',
           confidenceNote: `${fmtNum(primary.quantity)} × ${ca.factor} = ${fmtNum(ref.quantity)} exactly matches the depository balance after the ex-date. The post-split price is already in the price file.`,
@@ -275,7 +289,7 @@ export function runXRay(input: XRayInput): XRayResult {
           const id = nextId();
           findingIds.push(id);
           const d = Math.abs(diff) * price;
-          findings.push({
+          addFinding({
             id, ruleId: 'R7', ruleName: 'Fractional-unit tolerance', category: 'rounding',
             severity: 'Info', confidence: 'High',
             confidenceNote: `The difference of ${fmtNum(Math.abs(diff))} units is within the ${MF_UNIT_TOLERANCE}-unit tolerance.`,
@@ -315,7 +329,7 @@ export function runXRay(input: XRayInput): XRayResult {
           const atStake = Math.abs(diff) * price;
           const id = nextId();
           findingIds.push(id);
-          findings.push({
+          addFinding({
             id, ruleId: 'R3', ruleName: 'Quantity reconciliation', category: 'quantity-conflict',
             severity: explained ? 'Low' : 'High',
             confidence: explained ? 'High' : 'Medium',
@@ -381,7 +395,7 @@ export function runXRay(input: XRayInput): XRayResult {
       const mv = quantity * price;
       const id = nextId();
       findingIds.push(id);
-      findings.push({
+      addFinding({
         id, ruleId: 'R4', ruleName: 'Cost-basis completeness', category: 'missing-cost',
         severity: 'Medium', confidence: 'High',
         confidenceNote: 'The field is empty in the only holdings source for this position, and the CAS has no cost data.',
@@ -421,7 +435,7 @@ export function runXRay(input: XRayInput): XRayResult {
       const band = staleBand(staleDays);
       const id = nextId();
       findingIds.push(id);
-      findings.push({
+      addFinding({
         id, ruleId: 'R5', ruleName: 'Price freshness', category: 'stale-price',
         severity: 'Medium', confidence: 'Medium',
         confidenceNote: 'The price is definitely old. How far the real value has moved since then is uncertain.',
@@ -468,7 +482,7 @@ export function runXRay(input: XRayInput): XRayResult {
         const id = nextId();
         findingIds.push(id);
         const cy = ((b.face * b.couponRate) / price) * 100;
-        findings.push({
+        addFinding({
           id, ruleId: 'R6', ruleName: 'Yield-label consistency', category: 'yield-label',
           severity: 'Medium', confidence: 'Medium',
           confidenceNote: `The reported “yield” equals the coupon exactly, while the price is ${((Math.abs(b.face - price) / b.face) * 100).toFixed(1)}% ${price < b.face ? 'below' : 'above'} face value. The platform probably meant coupon. Our yield to maturity uses simplified maths.`,

@@ -18,7 +18,9 @@ export function liquidCash(p: CanonicalPortfolio): number {
 
 export function analyse(answers: Answers, p: CanonicalPortfolio): Analysis {
   const risk = computeRisk(answers, liquidCash(p));
-  const suit = assessSuitability(p, risk.label, stageOf(answers), risk.bufferTarget);
+  const suit = assessSuitability(p, risk.label, stageOf(answers), risk.bufferTarget, {
+    horizon: answers.horizon, incomeNeed: answers.incomeNeed, liquidCash: liquidCash(p), bufferMonths: risk.bufferMonths, monthlyExpenses: answers.monthlyExpenses,
+  });
   const tax = buildTaxProfile(answers, p);
   const advice = buildAdvice(answers, risk, suit, tax, p);
   return { risk, suit, tax, advice };
